@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const fetchuser = require("../middleware/fetchUser");
+const {fetchuser, checkAdminRole} = require("../middleware/middleware");
 const Tags = require("../models/Tags")
 const SubTags = require("../models/Sub-Tag");
 // const Notes = require("../models/Notes");
@@ -8,7 +8,7 @@ const { body, validationResult } = require('express-validator');
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addtags', fetchuser, [
+router.post('/addtags', [fetchuser, checkAdminRole], [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
 ], async (req, res) => {
@@ -38,7 +38,7 @@ router.post('/addtags', fetchuser, [
 
 
 // Get all tags using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/fetchalltags', fetchuser, async (req, res) => {
+router.get('/fetchalltags', [fetchuser, checkAdminRole], async (req, res) => {
   try {
     // Fetch all sub-tags and populate the "tagId" field with the "_id" field of the Tags collection
     let subTags = await SubTags.find().populate("_id");
@@ -74,7 +74,7 @@ router.get('/fetchalltags', fetchuser, async (req, res) => {
 
 
 // Update tag using: put "/api/notes/updatetags/:id". Login to be required.
-router.put('/updatetags/:id', fetchuser, [
+router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -116,7 +116,7 @@ router.put('/updatetags/:id', fetchuser, [
 
 
 // Delete a tag using: delete "/api/notes/deletetags/:id". Login to be required.
-router.delete('/deletetags/:id', fetchuser, async (req, res) => {
+router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) => {
   try {
     const tag = await Tags.findById(req.params.id);
 

@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const fetchuser = require("../middleware/fetchUser");
+const {fetchuser} = require("../middleware/middleware");
 const Notes = require("../models/Notes");
 const { body, validationResult } = require('express-validator');
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/fetchallnotes',fetchuser, async (req, res) => {
+router.get('/getallnotes',fetchuser, async (req, res) => {
   try {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
@@ -17,6 +17,21 @@ router.get('/fetchallnotes',fetchuser, async (req, res) => {
   }
 
 });
+
+
+// Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
+router.get('/getnotes',fetchuser, async (req, res) => {
+  try {
+    let note = await Notes.find({ user: req.user.id });
+    // let note = await Notes.find();
+    res.send(note);
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send("Enternal Server Error");
+  }
+
+});
+
 
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 

@@ -1,12 +1,12 @@
 const express = require("express");
 const router = express.Router();
-const fetchuser = require("../middleware/fetchUser");
+const {fetchuser,checkAdminRole} = require("../middleware/middleware");
 const Roles = require("../models/Roles")
 const { body, validationResult } = require('express-validator');
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addrole',fetchuser , [
+router.post('/addrole',[fetchuser, checkAdminRole] , [
     body('title',"Enter Valid Title").isLength({ min: 3 }),
     body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
   ], async (req, res) => {
@@ -36,7 +36,7 @@ router.post('/addrole',fetchuser , [
 
 
 // Update role using: put "/api/roles/updaterole/:id". Login toBeRequired.
-router.put('/updaterole/:id', fetchuser, [
+router.put('/updaterole/:id', [fetchuser, checkAdminRole], [
     body('title', "Enter Valid Title").isLength({ min: 3 }),
     body('description', "Description must be at least 5 characters long").isLength({ min: 5 })
 ], async (req, res) => {
@@ -76,7 +76,7 @@ router.put('/updaterole/:id', fetchuser, [
 
 
 // Delete role using: delete "/api/roles/delete/:id". Login toBeRequired.
-router.delete('/deleterole/:id', fetchuser, async (req, res) => {
+router.delete('/deleterole/:id', [fetchuser, checkAdminRole], async (req, res) => {
     try {
         const roleId = req.params.id;
 
@@ -100,7 +100,7 @@ router.delete('/deleterole/:id', fetchuser, async (req, res) => {
 });
 
 // Get role using: Get "/api/roles/getallroles". Login toBeRequired.
-router.get('/getallroles', fetchuser, async (req, res) => {
+router.get('/getallroles', [fetchuser, checkAdminRole], async (req, res) => {
     try {
 
         // Find the role by ID

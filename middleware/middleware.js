@@ -11,10 +11,8 @@ const fetchuser = (req,res,next)=>{
     }
     try {
         const data = jwt.verify(token,privateKey);
-        console.log(data.user)
+        console.log(data)
         req.user = data.user;
-        // console.log(data.user.id)
-        // console.log(req.user.user.id)
         next();
     } catch (error) {
         res.status(401).send({error:"Please authenticate using valid token"})
@@ -22,4 +20,14 @@ const fetchuser = (req,res,next)=>{
 
 }
 
-module.exports = fetchuser;
+const checkAdminRole = (req, res, next) => {
+
+    console.log(req.user, "Testing")
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        res.status(403).send({error: "Unauthorized access. Admin role required."});
+    }
+}
+
+module.exports = {fetchuser,checkAdminRole};

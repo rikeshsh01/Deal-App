@@ -18,6 +18,8 @@ app.use("/api/notes",require("./routes/notes"));
 app.use("/api/tag",require("./routes/tag"));
 app.use("/api/subtag",require("./routes/sub-tag"));
 app.use("/api/role",require("./routes/role"));
+app.use("/api",require("./routes/search"));
+
 
 app.listen(port, () => {
   console.log(`Deal app listening on port ${port}`)

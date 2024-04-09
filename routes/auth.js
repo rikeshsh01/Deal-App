@@ -5,7 +5,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
-const fetchuser = require("../middleware/fetchUser");
+const {fetchuser, checkAdminRole} = require("../middleware/middleware");
 
 var privateKey = "MynameisRicky";
 
@@ -35,32 +35,33 @@ router.post('/createuser', [
         const salt = await bcrypt.genSalt(10);
         const secPass = await bcrypt.hash(req.body.password, salt);
 
-        const { name, email, roleId } = req.body;
-
-        console.log(req.body.password, "Update password");
+        const { name, email,roleId } = req.body;
 
         const roles = await Roles.find();
 
         // Use find() to find the role with the matching roleId
-        let role = roles.find((r) => {
-            return r._id.toString() === roleId.toString();
-        });
+        // let role = roles.find((r) => {
+        //     return r._id.toString() === roleId.toString();
+        // });
+        // console.log(role)
 
         user = await Users.create({
             name: name,
             email: email,
             password: secPass,
-            role: role.title
+            role: roleId?roleId:"User"
         });
-        const data = {
-            user: {
-                id: user.id
-            }
-        }
+        // const data = {
+        //     user: {
+        //         id: user.id
+        //     }
+        // }
 
-        const authToken = jwt.sign(data, privateKey);
+        // const authToken = jwt.sign(data, privateKey);
         success = true;
-        res.send({ success, authToken });
+        // res.send({ success, authToken, msg: 'user created successfully' });
+        res.send({ success,user, msg: 'user created successfully' });
+
 
     } catch (error) {
         console.log(error.message);
@@ -101,7 +102,8 @@ router.post('/login', [
 
         const data = {
             user: {
-                id: user.id
+                id: user.id,
+                role:user.role
             }
         }
 
@@ -118,7 +120,7 @@ router.post('/login', [
 
 
 // Get USER data using POST "/api/auth/getuser". login required
-router.post('/getuser', fetchuser, async (req, res) => {
+router.get('/getuser', fetchuser, async (req, res) => {
     try {
         userId = req.user.id;
         console.log(userId)
@@ -131,4 +133,18 @@ router.post('/getuser', fetchuser, async (req, res) => {
 
     }
 });
+
+// Get USER data using POST "/api/auth/getuser". login required
+router.post('/getuser', [fetchuser, checkAdminRole], async (req, res) => {
+    try {
+        const user = await Users.find().select("-password");
+        res.send(user);
+
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send("Enternal Server Error");
+
+    }
+});
+
 module.exports = router;
