@@ -19,6 +19,7 @@ app.use("/api/tag",require("./routes/tag"));
 app.use("/api/subtag",require("./routes/sub-tag"));
 app.use("/api/role",require("./routes/role"));
 app.use("/api",require("./routes/search"));
+app.use("/api/comment",require("./routes/comment"));
 
 
 app.listen(port, () => {
