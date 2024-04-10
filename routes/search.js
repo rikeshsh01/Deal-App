@@ -31,7 +31,10 @@ router.get('/search', async (req, res) => {
       res.json({ notes });
     } catch (error) {
       console.error(error.message);
-      res.status(500).send("Internal Server Error");
+      res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
   });
   

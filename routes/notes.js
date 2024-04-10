@@ -10,10 +10,17 @@ router.get('/getallnotes',fetchuser, async (req, res) => {
   try {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
-    res.send(note);
+    res.status(200).send({
+      status: 'success',
+      message: 'Notes fetched successfully',
+      data: note
+    });
   } catch (error) {
     console.log(error.message);
-    res.status(500).send("Enternal Server Error");
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
   }
 
 });
@@ -24,10 +31,17 @@ router.get('/getnotes',fetchuser, async (req, res) => {
   try {
     let note = await Notes.find({ user: req.user.id });
     // let note = await Notes.find();
-    res.send(note);
+    res.status(200).send({
+      status: 'success',
+      message: 'Posts of this user fetched successfully',
+      data: note
+    });
   } catch (error) {
     console.log(error.message);
-    res.status(500).send("Enternal Server Error");
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
   }
 
 });
@@ -49,7 +63,15 @@ router.post('/addnotes', fetchuser, [
   try {
     const { title, description, tag, image } = req.body;
     let note;
+    note = new Notes({
+      title,
+      description,
+      tag,
+      image,
+      user: req.user.id
+    });
 
+    /*
     if (image) {
       // If image is provided, convert it to Buffer and store in the database
       const imageBuffer = Buffer.from(image, 'base64'); // Assuming the image is sent as base64 encoded string
@@ -72,13 +94,16 @@ router.post('/addnotes', fetchuser, [
         user: req.user.id
       });
     }
-
+    */
     const saveNote = await note.save();
 
     res.json({ saveNote });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    console.log(error.message);
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
   }
 });
 
@@ -192,8 +217,11 @@ router.put('/updatenote/:id', fetchuser, [
 
     res.json({ updatedNote });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    cconsole.log(error.message);
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
   }
 });
 
@@ -220,8 +248,11 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
 
     res.json({ msg: 'Note deleted successfully' });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    console.log(error.message);
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
   }
 });
 

@@ -5,7 +5,7 @@ const router = express.Router();
 const { body, validationResult } = require('express-validator');
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
-const {fetchuser, checkAdminRole} = require("../middleware/middleware");
+const { fetchuser, checkAdminRole } = require("../middleware/middleware");
 
 var privateKey = "MynameisRicky";
 
@@ -35,7 +35,7 @@ router.post('/createuser', [
         const salt = await bcrypt.genSalt(10);
         const secPass = await bcrypt.hash(req.body.password, salt);
 
-        const { name, email,roleId } = req.body;
+        const { name, email, roleId } = req.body;
 
         const roles = await Roles.find();
 
@@ -49,7 +49,7 @@ router.post('/createuser', [
             name: name,
             email: email,
             password: secPass,
-            role: roleId?roleId:"User"
+            role: roleId ? roleId : "User"
         });
         // const data = {
         //     user: {
@@ -60,12 +60,15 @@ router.post('/createuser', [
         // const authToken = jwt.sign(data, privateKey);
         success = true;
         // res.send({ success, authToken, msg: 'user created successfully' });
-        res.send({ success,user, msg: 'user created successfully' });
+        res.send({ success, user, msg: 'user created successfully' });
 
 
     } catch (error) {
         console.log(error.message);
-        res.status(500).send("Some Error Occured")
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
 
     }
 });
@@ -103,7 +106,7 @@ router.post('/login', [
         const data = {
             user: {
                 id: user.id,
-                role:user.role
+                role: user.role
             }
         }
 
@@ -113,7 +116,10 @@ router.post('/login', [
 
     } catch (error) {
         console.log(error.message);
-        res.status(500).send("Enternal Server Error");
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
 
     }
 });
@@ -129,7 +135,10 @@ router.get('/getuser', fetchuser, async (req, res) => {
 
     } catch (error) {
         console.log(error.message);
-        res.status(500).send("Enternal Server Error");
+    res.status(500).send({
+      status: 'error',
+      message: error.message
+    });
 
     }
 });

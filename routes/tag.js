@@ -68,7 +68,10 @@ router.get('/fetchalltags', [fetchuser, checkAdminRole], async (req, res) => {
     res.send(tagsWithSubTags);
   } catch (error) {
     console.log(error.message);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
   }
 });
 
@@ -110,7 +113,10 @@ router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
   }
 });
 
@@ -136,7 +142,10 @@ router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) =
 
   } catch (error) {
     console.error(error.message);
-    res.status(500).send("Internal Server Error");
+    res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
   }
 });
 

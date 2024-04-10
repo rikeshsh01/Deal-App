@@ -29,8 +29,11 @@ router.post('/addsubtags',[fetchuser, checkAdminRole] , [
       res.json({saveSubTag});
       
     } catch (error) {
-      console.log(error.message);
-      res.status(500).send("Enternal Server Error");
+              console.log(error.message);
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
   
   });

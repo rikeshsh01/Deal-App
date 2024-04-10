@@ -23,7 +23,7 @@ const fetchuser = (req,res,next)=>{
 const checkAdminRole = (req, res, next) => {
 
     console.log(req.user, "Testing")
-    if (req.user && req.user.role === 'admin') {
+    if (req.user && req.user.role === 'Admin') {
         next();
     } else {
         res.status(403).send({error: "Unauthorized access. Admin role required."});

@@ -17,10 +17,14 @@ const NotesSchema = new Schema({
     tag: { 
         type: String, 
     },
-    image: { 
-        data: Buffer, // Storing image data as Buffer
-        contentType: String // MIME type of the image
+    image:{
+        type: String, 
+        required:true
     },
+    // image: { 
+    //     data: Buffer, // Storing image data as Buffer
+    //     contentType: String // MIME type of the image
+    // },
     date: { 
         type: Date, 
         default: Date.now 

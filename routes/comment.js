@@ -34,10 +34,13 @@ router.post('/:noteId/addcomment', fetchuser, [
         // Save the comment
         await comment.save();
 
-        res.json({comment}); // Send the newly created comment as response
+        res.json({ comment }); // Send the newly created comment as response
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send("Internal Server Error");
+        console.log(error.message);
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
 });
 
@@ -73,10 +76,13 @@ router.put('/:noteId/comments/:commentId', fetchuser, [
         // Update the comment
         const updatedComment = await Comments.findByIdAndUpdate(req.params.commentId, { $set: { content: req.body.content } }, { new: true });
 
-        res.json({comment: updatedComment}); // Send the updated comment as response
+        res.json({ comment: updatedComment }); // Send the updated comment as response
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send("Internal Server Error");
+        console.log(error.message);
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
 });
 
@@ -106,8 +112,11 @@ router.delete('/:noteId/comments/:commentId', fetchuser, async (req, res) => {
 
         res.json({ msg: 'Comment removed' });
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send("Internal Server Error");
+        console.log(error.message);
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
 });
 

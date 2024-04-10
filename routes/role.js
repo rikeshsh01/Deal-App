@@ -1,38 +1,41 @@
 const express = require("express");
 const router = express.Router();
-const {fetchuser,checkAdminRole} = require("../middleware/middleware");
+const { fetchuser, checkAdminRole } = require("../middleware/middleware");
 const Roles = require("../models/Roles")
 const { body, validationResult } = require('express-validator');
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addrole',[fetchuser, checkAdminRole] , [
-    body('title',"Enter Valid Title").isLength({ min: 3 }),
+router.post('/addrole', [fetchuser, checkAdminRole], [
+    body('title', "Enter Valid Title").isLength({ min: 3 }),
     body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
-  ], async (req, res) => {
+], async (req, res) => {
     const errors = validationResult(req);
-  
+
     // Check wheather the user with the email exist already
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
     try {
-      const {title,description} = req.body;
-      const role= new Roles({
-        title,description
-      });
-      console.log(role)
-  
-      const saveRole = await role.save();
-  
-      res.json({saveRole});
-      
+        const { title, description } = req.body;
+        const role = new Roles({
+            title, description
+        });
+        console.log(role)
+
+        const saveRole = await role.save();
+
+        res.json({ saveRole });
+
     } catch (error) {
-      console.log(error.message);
-      res.status(500).send("Enternal Server Error");
+        console.log(error.message);
+        res.status(500).send({
+            status: 'error',
+            message: error.message
+        });
     }
-  
-  });
+
+});
 
 
 // Update role using: put "/api/roles/updaterole/:id". Login toBeRequired.
