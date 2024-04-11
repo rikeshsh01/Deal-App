@@ -20,7 +20,7 @@ app.use("/api/subtag",require("./routes/sub-tag"));
 app.use("/api/role",require("./routes/role"));
 app.use("/api",require("./routes/search"));
 app.use("/api/comment",require("./routes/comment"));
-
+app.use("/api/aditionaldetail",require("./routes/aditionaldetail"));
 
 app.listen(port, () => {
   console.log(`Deal app listening on port ${port}`)

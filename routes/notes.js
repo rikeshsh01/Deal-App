@@ -1,9 +1,10 @@
 const Notes = require("../models/Notes");
-const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const AdditionalDetails = require("../models/AdditionalDetails")
+const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/getallnotes',fetchuser, async (req, res) => {
+router.get('/getallnotes', fetchuser, async (req, res) => {
   try {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
@@ -24,7 +25,7 @@ router.get('/getallnotes',fetchuser, async (req, res) => {
 
 
 // Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
-router.get('/getnotes',fetchuser, async (req, res) => {
+router.get('/getnotes', fetchuser, async (req, res) => {
   try {
     let note = await Notes.find({ user: req.user.id });
     // let note = await Notes.find();
@@ -58,14 +59,18 @@ router.post('/addnotes', fetchuser, [
   }
 
   try {
-    const { title, description, tag, image } = req.body;
+    const { title, description, tag, image, latitude, longitude, location, additionalDetails } = req.body;
     let note;
     note = new Notes({
       title,
       description,
       tag,
       image,
-      user: req.user.id
+      latitude,
+      longitude,
+      location,
+      user: req.user.id,
+      created_at: new Date(),
     });
 
     /*
@@ -93,11 +98,31 @@ router.post('/addnotes', fetchuser, [
     }
     */
     const saveNote = await note.save();
+    let savedAdditionalDetails = [];
+
+    // If additionalDetails is provided, add them to the database
+    if (additionalDetails && additionalDetails.length > 0) {
+
+      const detailsPromises = additionalDetails.map(async (detail) => {
+        const { key, value } = detail;
+        const additionalDetail = new AdditionalDetails({
+          noteId: saveNote._id,
+          key,
+          value,
+          created_at: new Date(),
+        });
+        const savedDetail = await additionalDetail.save();
+        savedAdditionalDetails.push(savedDetail);
+      });
+      await Promise.all(detailsPromises);
+    }
 
     res.status(200).send({
       status: STATUS_CODES[200],
       message: 'Posts added successfully',
-      data: saveNote
+      data: saveNote,
+      additionalDetailsData: savedAdditionalDetails
+
     });
   } catch (error) {
     console.log(error.message);
@@ -114,6 +139,7 @@ router.post('/addnotes', fetchuser, [
 router.put('/updatenotes/:id',fetchuser, async (req, res) => {
   try {
     const {title,description,tag} = req.body;
+    console.log(title);
     
     // create newNote Object 
     const newNote = {};
@@ -184,7 +210,7 @@ router.put('/updatenote/:id', fetchuser, [
   }
 
   try {
-    const { title, description, tag, image } = req.body;
+    const { title, description, tag, image, latitude, longitude, location, additionalDetails } = req.body;
     const noteId = req.params.id;
 
     let note = await Notes.findById(noteId);
@@ -203,17 +229,27 @@ router.put('/updatenote/:id', fetchuser, [
     note.title = title;
     note.description = description;
     note.tag = tag;
+    note.image = image;
+    note.latitude = latitude;
+    note.longitude = longitude;
+    note.location = location;
+    note.updated_at = new Date();
 
-    if (image) {
-      // If image is provided, convert it to Buffer and store in the database
-      const imageBuffer = Buffer.from(image, 'base64'); // Assuming the image is sent as base64 encoded string
-      note.image = {
-        data: imageBuffer,
-        contentType: 'image/png' // You may need to adjust the content type based on the image type
-      };
-    }
+
+    // if (image) {
+    //   // If image is provided, convert it to Buffer and store in the database
+    //   const imageBuffer = Buffer.from(image, 'base64'); // Assuming the image is sent as base64 encoded string
+    //   note.image = {
+    //     data: imageBuffer,
+    //     contentType: 'image/png' // You may need to adjust the content type based on the image type
+    //   };
+    // }
 
     const updatedNote = await note.save();
+
+    if (!updatedNote) {
+      return res.status(404).json({ status: STATUS_CODES[404], message: 'Note not found or user unauthorized' });
+    }
 
     res.status(200).send({
       status: STATUS_CODES[200],
@@ -222,7 +258,7 @@ router.put('/updatenote/:id', fetchuser, [
     });
 
   } catch (error) {
-    cconsole.log(error.message);
+    console.log(error.message);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message

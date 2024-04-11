@@ -25,9 +25,29 @@ const NotesSchema = new Schema({
     //     data: Buffer, // Storing image data as Buffer
     //     contentType: String // MIME type of the image
     // },
-    date: { 
+    latitude: {
+        type: Number, // Latitude value
+        required: true
+    },
+    longitude: {
+        type: Number, // Longitude value
+        required: true
+    },
+    location: {
+        type: String, // Location name or description
+        required: true
+    },
+    created_at: { 
         type: Date, 
-        default: Date.now 
+        default: null
+    },
+    updated_at: { 
+        type: Date, 
+        default: null
+    },
+    deleted_at: { 
+        type: Date, 
+        default: null 
     }
 });
 

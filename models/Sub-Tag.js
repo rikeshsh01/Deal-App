@@ -13,9 +13,17 @@ const SubTagsSchema = new Schema({
         type: String, 
         required:true 
     },
-    date: { 
+    created_at: { 
         type: Date, 
-        default: Date.now 
+        default: null 
+    },
+    updated_at: { 
+        type: Date, 
+        default: null 
+    },
+    deleted_at: { 
+        type: Date, 
+        default: null 
     }
 });
 

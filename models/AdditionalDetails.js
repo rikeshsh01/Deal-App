@@ -1,16 +1,17 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const CommentSchema = new Schema({
-    userId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "user"
-    },
+const AdditionalDetailsSchema = new Schema({
     noteId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "post"
+        ref: "post",
+        required: true
     },
-    content: {
+    key: {
+        type: String,
+        required: true
+    },
+    value: {
         type: String,
         required: true
     },
@@ -28,5 +29,5 @@ const CommentSchema = new Schema({
     }
 });
 
-const Comment = mongoose.model("comment", CommentSchema);
-module.exports = Comment;
+const AdditionalDetails = mongoose.model("AdditionalDetails", AdditionalDetailsSchema);
+module.exports = AdditionalDetails;
