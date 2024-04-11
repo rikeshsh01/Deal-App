@@ -1,13 +1,10 @@
-const express = require("express");
 const Users = require("../models/Users");
 const Roles = require("../models/Roles");
-const router = express.Router();
-const { body, validationResult } = require('express-validator');
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
-const { fetchuser, checkAdminRole } = require("../middleware/middleware");
-
 var privateKey = "MynameisRicky";
+
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Create a USER using POST "/api/auth/createuser". No login required
@@ -18,7 +15,6 @@ router.post('/createuser', [
     body('password').isLength({ min: 5 })
 ], async (req, res) => {
     let success = false;
-    // console.log(req.body);
     const errors = validationResult(req);
 
     // Check wheather the user with the email exist already
@@ -60,13 +56,18 @@ router.post('/createuser', [
         // const authToken = jwt.sign(data, privateKey);
         success = true;
         // res.send({ success, authToken, msg: 'user created successfully' });
-        res.send({ success, user, msg: 'user created successfully' });
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            success: success,
+            msg:"user created successfully",
+            data:user
+          });
 
 
     } catch (error) {
         console.log(error.message);
         res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
 
@@ -86,7 +87,6 @@ router.post('/login', [
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
-    console.log(req.body);
     const { email, password } = req.body;
     try {
         let user = await Users.findOne({ email });
@@ -112,14 +112,20 @@ router.post('/login', [
 
         const authToken = jwt.sign(data, privateKey);
         success = true;
-        res.send({ success, authToken });
+
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            success: success,
+            msg:"user authenticate successfully",
+            authToken:authToken
+          });
 
     } catch (error) {
         console.log(error.message);
-    res.status(500).send({
-      status: 'error',
-      message: error.message
-    });
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
 
     }
 });
@@ -129,16 +135,20 @@ router.post('/login', [
 router.get('/getuser', fetchuser, async (req, res) => {
     try {
         userId = req.user.id;
-        console.log(userId)
         const user = await Users.findById(userId).select("-password");
-        res.send(user);
+
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Auth user data",
+            data:user
+          });
 
     } catch (error) {
         console.log(error.message);
-    res.status(500).send({
-      status: 'error',
-      message: error.message
-    });
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
 
     }
 });
@@ -147,11 +157,18 @@ router.get('/getuser', fetchuser, async (req, res) => {
 router.post('/getuser', [fetchuser, checkAdminRole], async (req, res) => {
     try {
         const user = await Users.find().select("-password");
-        res.send(user);
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Users data",
+            data:user
+          });
 
     } catch (error) {
         console.log(error.message);
-        res.status(500).send("Enternal Server Error");
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
 
     }
 });

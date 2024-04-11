@@ -1,10 +1,7 @@
-const express = require("express");
-const router = express.Router();
-const {fetchuser, checkAdminRole} = require("../middleware/middleware");
 const Tags = require("../models/Tags")
 const SubTags = require("../models/Sub-Tag");
-// const Notes = require("../models/Notes");
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
@@ -27,11 +24,19 @@ router.post('/addtags', [fetchuser, checkAdminRole], [
 
     const saveTag = await tag.save();
 
-    res.json({ saveTag });
+    res.status(200).send({
+      status:STATUS_CODES[200],
+      msg:"Tag added successfully",
+      data:saveTag
+
+    })
 
   } catch (error) {
-    console.log(error.message);
-    res.status(500).send("Enternal Server Error");
+    cconsole.error(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 
 });
@@ -65,13 +70,19 @@ router.get('/fetchalltags', [fetchuser, checkAdminRole], async (req, res) => {
       };
     });
 
-    res.send(tagsWithSubTags);
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: "Fetched successfully",
+      data: tagsWithSubTags
+    });
+
+    // res.send(tagsWithSubTags);
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
-            status: 'error',
-            message: error.message
-        });
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 });
 
@@ -109,14 +120,18 @@ router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
 
     tag = await Tags.findByIdAndUpdate(req.params.id, { $set: tagFields }, { new: true });
 
-    res.json({ tag });
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: "Tag updated successfully",
+      data: tag
+    });
 
   } catch (error) {
     console.error(error.message);
     res.status(500).send({
-            status: 'error',
-            message: error.message
-        });
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 });
 
@@ -137,15 +152,17 @@ router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) =
     // }
 
     await Tags.findByIdAndRemove(req.params.id);
-
-    res.json({ msg: 'Tag removed' });
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: "Tag removed"
+    });
 
   } catch (error) {
     console.error(error.message);
     res.status(500).send({
-            status: 'error',
-            message: error.message
-        });
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 });
 

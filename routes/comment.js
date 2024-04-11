@@ -1,10 +1,6 @@
-const express = require("express");
-const router = express.Router();
-const { fetchuser } = require("../middleware/middleware");
 const Notes = require("../models/Notes");
-const Users = require("../models/Users");
 const Comments = require('../models/Comments');
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 // Add comment to a post by multiple users: POST "/api/notes/:noteId/comments"
 router.post('/:noteId/addcomment', fetchuser, [
@@ -32,20 +28,24 @@ router.post('/:noteId/addcomment', fetchuser, [
         });
 
         // Save the comment
-        await comment.save();
+        const saveComment = await comment.save();
 
-        res.json({ comment }); // Send the newly created comment as response
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Comment saved successfully",
+            data:saveComment
+          });
     } catch (error) {
         console.log(error.message);
         res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
     }
 });
 
 // Update a comment by a user: PUT "/api/notes/:noteId/comments/:commentId"
-router.put('/:noteId/comments/:commentId', fetchuser, [
+router.put('/:noteId/updatecomment/:commentId', fetchuser, [
     body('content', "Description cannot be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -76,18 +76,23 @@ router.put('/:noteId/comments/:commentId', fetchuser, [
         // Update the comment
         const updatedComment = await Comments.findByIdAndUpdate(req.params.commentId, { $set: { content: req.body.content } }, { new: true });
 
-        res.json({ comment: updatedComment }); // Send the updated comment as response
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Comment updated successfully",
+            data:updatedComment
+          });
+
     } catch (error) {
         console.log(error.message);
         res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
     }
 });
 
 // Delete a comment by a user: DELETE "/api/notes/:noteId/comments/:commentId"
-router.delete('/:noteId/comments/:commentId', fetchuser, async (req, res) => {
+router.delete('/:noteId/deletecomment/:commentId', fetchuser, async (req, res) => {
     try {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
@@ -110,15 +115,48 @@ router.delete('/:noteId/comments/:commentId', fetchuser, async (req, res) => {
         // Delete the comment
         await comment.remove();
 
-        res.json({ msg: 'Comment removed' });
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Comment deleted successfully",
+          })
     } catch (error) {
         console.log(error.message);
         res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
     }
 });
+
+
+//Get comments of a note
+router.get('/:noteId/getcomments/', async (req,res)=>{
+    try {
+        // Check if the note exists
+        const note = await Notes.findById(req.params.noteId);
+        if (!note) {
+            return res.status(404).json({ msg: 'Note not found' });
+        }
+
+        //find comment of the post
+        let comments = await Comments.find({noteId: req.params.noteId});
+
+        res.status(200).send({
+            status:STATUS_CODES[200],
+            msg:"Fetched the comment of the post",
+            data:comments
+        })
+
+    }
+    catch (error) {
+        console.log(error.message);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
+
+    }
+})
 
 
 module.exports = router;

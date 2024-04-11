@@ -1,9 +1,5 @@
-const express = require("express");
-const router = express.Router();
-const {fetchuser,checkAdminRole} = require("../middleware/middleware");
 const SubTags = require("../models/Sub-Tag")
-// const Notes = require("../models/Notes");
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
@@ -22,18 +18,21 @@ router.post('/addsubtags',[fetchuser, checkAdminRole] , [
       const subtag= new SubTags({
         title,description,tagId
       });
-      console.log(subtag)
   
       const saveSubTag = await subtag.save();
-  
-      res.json({saveSubTag});
+
+      res.status(200).send({
+        status:STATUS_CODES[200],
+        msg:"Subtag added successfully",
+        data:saveSubTag
+      })
       
     } catch (error) {
-              console.log(error.message);
-        res.status(500).send({
-            status: 'error',
-            message: error.message
-        });
+      console.error(error.message);
+      res.status(500).send({
+        status: STATUS_CODES[500],
+        message: error.message
+      });
     }
   
   });
@@ -77,11 +76,18 @@ router.put('/updatesubtag/:id', [fetchuser, checkAdminRole], [
           { new: true }
       );
 
-      res.json(subtag);
+      res.status(200).send({
+        status:STATUS_CODES[200],
+        msg:"Subtag updated successfully",
+        data:subtag
+      })
 
   } catch (error) {
-      console.error(error.message);
-      res.status(500).send('Internal Server Error');
+    console.error(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 });
 
@@ -104,11 +110,17 @@ router.delete('/deletesubtag/:id', [fetchuser, checkAdminRole], async (req, res)
       // Delete the subtag
       await SubTags.findByIdAndRemove(req.params.id);
 
-      res.json({ msg: 'Subtag deleted' });
+      res.status(200).send({
+        status:STATUS_CODES[200],
+        msg:"Subtag deleted successfully"
+      })
 
   } catch (error) {
-      console.error(error.message);
-      res.status(500).send('Internal Server Error');
+    console.error(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
   }
 });
 

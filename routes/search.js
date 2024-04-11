@@ -1,10 +1,6 @@
-const express = require("express");
-const router = express.Router();
-const {fetchuser} = require("../middleware/middleware");
 const Notes = require("../models/Notes");
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
-// Define the route for searching notes
 // Define the route for searching notes
 router.get('/search', async (req, res) => {
     try {
@@ -27,12 +23,16 @@ router.get('/search', async (req, res) => {
   
       // Perform the search query
       const notes = await Notes.find(searchQuery);
+      res.status(200).send({
+        status:STATUS_CODES[200],
+        msg:"Search results fetched successfully",
+        data:notes
+      })
   
-      res.json({ notes });
     } catch (error) {
       console.error(error.message);
       res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
     }

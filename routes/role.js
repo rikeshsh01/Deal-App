@@ -1,8 +1,5 @@
-const express = require("express");
-const router = express.Router();
-const { fetchuser, checkAdminRole } = require("../middleware/middleware");
 const Roles = require("../models/Roles")
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
@@ -25,12 +22,16 @@ router.post('/addrole', [fetchuser, checkAdminRole], [
 
         const saveRole = await role.save();
 
-        res.json({ saveRole });
+        res.status(200).send({
+            status: STATUS_CODES[200],
+            msg: "Role added successfully",
+            data: saveRole
+        })
 
     } catch (error) {
         console.log(error.message);
         res.status(500).send({
-            status: 'error',
+            status: STATUS_CODES[500],
             message: error.message
         });
     }
@@ -69,11 +70,20 @@ router.put('/updaterole/:id', [fetchuser, checkAdminRole], [
         // Save the updated role
         role = await role.save();
 
+        res.status(200).send({
+            status: STATUS_CODES[200],
+            msg: "Role updated successfully",
+            data: role
+        })
+
         res.json({ role });
 
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Internal Server Error');
+        console.log(error.message);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
     }
 });
 
@@ -94,11 +104,17 @@ router.delete('/deleterole/:id', [fetchuser, checkAdminRole], async (req, res) =
         // Delete the role
         await role.remove();
 
-        res.json({ msg: 'Role deleted successfully' });
+        res.status(200).send({
+            status: STATUS_CODES[200],
+            msg: "Role Deleted successfully",
+        });
 
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Internal Server Error');
+        cconsole.log(error.message);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
     }
 });
 
@@ -108,19 +124,20 @@ router.get('/getallroles', [fetchuser, checkAdminRole], async (req, res) => {
 
         // Find the role by ID
         let role = await Roles.find();
-
-        res.json({ role });
+        res.status(200).send({
+            status: STATUS_CODES[200],
+            msg: "Role fetched successfully",
+            data:role
+        });
 
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send('Internal Server Error');
+        console.log(error.message);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
     }
 });
-
-
-
-
-
 
 module.exports = router;
 

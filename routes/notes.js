@@ -1,8 +1,5 @@
-const express = require("express");
-const router = express.Router();
-const {fetchuser} = require("../middleware/middleware");
 const Notes = require("../models/Notes");
-const { body, validationResult } = require('express-validator');
+const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
@@ -11,14 +8,14 @@ router.get('/getallnotes',fetchuser, async (req, res) => {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
     res.status(200).send({
-      status: 'success',
+      status: STATUS_CODES[200],
       message: 'Notes fetched successfully',
       data: note
     });
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
-      status: 'error',
+      status: STATUS_CODES[500],
       message: error.message
     });
   }
@@ -32,14 +29,14 @@ router.get('/getnotes',fetchuser, async (req, res) => {
     let note = await Notes.find({ user: req.user.id });
     // let note = await Notes.find();
     res.status(200).send({
-      status: 'success',
+      status: STATUS_CODES[200],
       message: 'Posts of this user fetched successfully',
       data: note
     });
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
-      status: 'error',
+      status: STATUS_CODES[500],
       message: error.message
     });
   }
@@ -97,11 +94,15 @@ router.post('/addnotes', fetchuser, [
     */
     const saveNote = await note.save();
 
-    res.json({ saveNote });
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Posts added successfully',
+      data: saveNote
+    });
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
-      status: 'error',
+      status: STATUS_CODES[500],
       message: error.message
     });
   }
@@ -113,7 +114,6 @@ router.post('/addnotes', fetchuser, [
 router.put('/updatenotes/:id',fetchuser, async (req, res) => {
   try {
     const {title,description,tag} = req.body;
-    console.log(title);
     
     // create newNote Object 
     const newNote = {};
@@ -215,11 +215,16 @@ router.put('/updatenote/:id', fetchuser, [
 
     const updatedNote = await note.save();
 
-    res.json({ updatedNote });
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Posts updated successfully',
+      data: updatedNote
+    });
+
   } catch (error) {
     cconsole.log(error.message);
     res.status(500).send({
-      status: 'error',
+      status: STATUS_CODES[500],
       message: error.message
     });
   }
@@ -246,11 +251,14 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
     // Delete the note
     await note.remove();
 
-    res.json({ msg: 'Note deleted successfully' });
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Posts deleted successfully',
+    });
   } catch (error) {
     console.log(error.message);
     res.status(500).send({
-      status: 'error',
+      status: STATUS_CODES[500],
       message: error.message
     });
   }
