@@ -15,9 +15,9 @@ const userSchema = new Schema({
         type: String, 
         required:true 
     },
-    role:{ 
-        type: String, 
-        required: true 
+    roleId:{ 
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"role"
     },
     created_at: { 
         type: Date, 

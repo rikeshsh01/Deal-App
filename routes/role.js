@@ -3,7 +3,7 @@ const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES }
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addrole', [fetchuser, checkAdminRole], [
+router.post('/addrole', [
     body('title', "Enter Valid Title").isLength({ min: 3 }),
     body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
 ], async (req, res) => {
@@ -16,9 +16,8 @@ router.post('/addrole', [fetchuser, checkAdminRole], [
     try {
         const { title, description } = req.body;
         const role = new Roles({
-            title, description
+            title, description,created_at: new Date()
         });
-        console.log(role)
 
         const saveRole = await role.save();
 
@@ -66,6 +65,7 @@ router.put('/updaterole/:id', [fetchuser, checkAdminRole], [
         // Update role fields
         role.title = title;
         role.description = description;
+        role.updated_at = new Date();
 
         // Save the updated role
         role = await role.save();

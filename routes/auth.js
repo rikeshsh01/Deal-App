@@ -4,73 +4,57 @@ var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 var privateKey = "MynameisRicky";
 
-const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 
 // Create a USER using POST "/api/auth/createuser". No login required
-
 router.post('/createuser', [
     body('email').isEmail(),
     body('name').isLength({ min: 3 }),
     body('password').isLength({ min: 5 })
 ], async (req, res) => {
-    let success = false;
-    const errors = validationResult(req);
-
-    // Check wheather the user with the email exist already
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
     try {
-        let user = await Users.findOne({ email: req.body.email });
-
-        if (user) {
-            return res.status(400).json({ success, error: "the user with this email is already exist" });
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
         }
-        // Create new user
+
+        const { name, email, password, roleId } = req.body;
+
+        // Check if the user with the email already exists
+        let user = await Users.findOne({ email });
+        if (user) {
+            return res.status(400).json({ success: false, error: "A user with this email already exists" });
+        }
+
+        // Get the role ID
+        const role = await Roles.findOne({ title: "User" });
+        const defaultRoleId = role ? role._id.toString() : null;
+
+        // Hash the password
         const salt = await bcrypt.genSalt(10);
-        const secPass = await bcrypt.hash(req.body.password, salt);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
-        const { name, email, roleId } = req.body;
-
-        const roles = await Roles.find();
-
-        // Use find() to find the role with the matching roleId
-        // let role = roles.find((r) => {
-        //     return r._id.toString() === roleId.toString();
-        // });
-        // console.log(role)
-
+        // Create new user
         user = await Users.create({
-            name: name,
-            email: email,
-            password: secPass,
-            role: roleId ? roleId : "User"
+            name,
+            email,
+            password: hashedPassword,
+            roleId: roleId || defaultRoleId,
+            created_at: new Date()
         });
-        // const data = {
-        //     user: {
-        //         id: user.id
-        //     }
-        // }
 
-        // const authToken = jwt.sign(data, privateKey);
-        success = true;
-        // res.send({ success, authToken, msg: 'user created successfully' });
-        res.status(200).send({
-            status:STATUS_CODES[200],
-            success: success,
-            msg:"user created successfully",
-            data:user
-          });
-
-
+        res.status(201).json({
+            success: true,
+            message: "User created successfully",
+            data: user
+        });
     } catch (error) {
-        console.log(error.message);
-        res.status(500).send({
+        console.error(error.message);
+        res.status(500).json({
             status: STATUS_CODES[500],
             message: error.message
         });
-
     }
 });
 
@@ -78,55 +62,49 @@ router.post('/createuser', [
 // Authenticate a USER using POST "/api/auth/login". No login required
 router.post('/login', [
     body('email', "Enter valid Email").isEmail(),
-    body('password', "Password unvalid").isLength({ min: 5 })
+    body('password', "Password invalid").isLength({ min: 5 })
 ], async (req, res) => {
-    let success = false;
-    const errors = validationResult(req);
-
-    // Check wheather the user with the email exist already
-    if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-    }
-    const { email, password } = req.body;
     try {
-        let user = await Users.findOne({ email });
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { email, password } = req.body;
+
+        // Find user by email
+        const user = await Users.findOne({ email });
 
         if (!user) {
-            success = false;
-            return res.status(400).json({ success, error: "User Doesnot exist" });
+            return res.status(400).json({ success: false, error: "User does not exist" });
         }
 
-        const passwordCOmpare = await bcrypt.compare(password, user.password);
-
-        if (!passwordCOmpare) {
-            success = false;
-            return res.status(400).json({ success, error: "Password doesnot matched" });
+        // Check if password matches
+        const passwordMatch = await bcrypt.compare(password, user.password);
+        if (!passwordMatch) {
+            return res.status(400).json({ success: false, error: "Password does not match" });
         }
 
-        const data = {
+        // Generate JWT token
+        const payload = {
             user: {
                 id: user.id,
                 role: user.role
             }
-        }
+        };
+        const authToken = jwt.sign(payload, privateKey);
 
-        const authToken = jwt.sign(data, privateKey);
-        success = true;
-
-        res.status(200).send({
-            status:STATUS_CODES[200],
-            success: success,
-            msg:"user authenticate successfully",
-            authToken:authToken
-          });
-
+        res.status(200).json({
+            success: true,
+            message: "User authenticated successfully",
+            authToken: authToken
+        });
     } catch (error) {
-        console.log(error.message);
-        res.status(500).send({
+        console.error(error.message);
+        res.status(500).json({
             status: STATUS_CODES[500],
             message: error.message
         });
-
     }
 });
 
@@ -138,10 +116,10 @@ router.get('/getuser', fetchuser, async (req, res) => {
         const user = await Users.findById(userId).select("-password");
 
         res.status(200).send({
-            status:STATUS_CODES[200],
-            msg:"Auth user data",
-            data:user
-          });
+            status: STATUS_CODES[200],
+            msg: "Auth user data",
+            data: user
+        });
 
     } catch (error) {
         console.log(error.message);
@@ -158,10 +136,10 @@ router.post('/getuser', [fetchuser, checkAdminRole], async (req, res) => {
     try {
         const user = await Users.find().select("-password");
         res.status(200).send({
-            status:STATUS_CODES[200],
-            msg:"Users data",
-            data:user
-          });
+            status: STATUS_CODES[200],
+            msg: "Users data",
+            data: user
+        });
 
     } catch (error) {
         console.log(error.message);

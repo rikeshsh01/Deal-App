@@ -210,7 +210,7 @@ router.put('/updatenote/:id', fetchuser, [
   }
 
   try {
-    const { title, description, tag, image, latitude, longitude, location, additionalDetails } = req.body;
+    const { title, description, tag, image, latitude, longitude, location } = req.body;
     const noteId = req.params.id;
 
     let note = await Notes.findById(noteId);

@@ -139,7 +139,8 @@ router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
 // Delete a tag using: delete "/api/notes/deletetags/:id". Login to be required.
 router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) => {
   try {
-    const tag = await Tags.findById(req.params.id);
+    const tagId = req.params.id;
+    const tag = await Tags.findById(tagId);
 
     // Check if the tag exists
     if (!tag) {
@@ -151,7 +152,12 @@ router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) =
     //   return res.status(401).json({ msg: 'Not authorized' });
     // }
 
-    await Tags.findByIdAndRemove(req.params.id);
+    // Delete the tag and its subtags
+    await Promise.all([
+      Tags.findByIdAndRemove(tagId),
+      deleteSubtags(tagId)
+    ]);
+
     res.status(200).send({
       status: STATUS_CODES[200],
       message: "Tag removed"
@@ -165,6 +171,17 @@ router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) =
     });
   }
 });
+
+// Middleware to delete subtags associated with the tag being removed
+const deleteSubtags = async (tagId) => {
+  try {
+    // You can also delete subtags from a separate collection if they are stored that way
+    await SubTags.deleteMany({ tagId: tagId });
+  } catch (error) {
+    console.error("Error deleting subtags:", error);
+    throw error;
+  }
+};
 
 
 
