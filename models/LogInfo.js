@@ -17,9 +17,9 @@ const LogInfoSchema = new Schema({
         type: String,
         required: false
     },
-    timestamp: {
+    created_at: {
         type: Date,
-        default: Date.now
+        default: null
     }
 });
 

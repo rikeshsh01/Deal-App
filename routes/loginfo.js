@@ -6,7 +6,8 @@ const logActivity = async (action, description,status, userId) => {
             action,
             description,
             status,
-            userId: userId // Optional: pass user ID if applicable
+            userId: userId,
+            created_at: new Date(),
         });
         await logEntry.save();
     } catch (error) {

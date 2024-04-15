@@ -24,7 +24,8 @@ router.post('/:noteId/addcomment', fetchuser, [
         const comment = new Comments({
             userId: req.user.id,
             noteId: req.params.noteId,
-            content: req.body.content
+            content: req.body.content,
+            created_at: new Date(),
         });
 
         // Save the comment

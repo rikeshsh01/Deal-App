@@ -1,11 +1,11 @@
 const Notes = require("../models/Notes");
 const AdditionalDetails = require("../models/AdditionalDetails")
 const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
-const  logActivity  = require("./loginfo");
+const logActivity = require("./loginfo");
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/getallnotes', fetchuser, async (req, res) => {
+router.get('/getallnotes', async (req, res) => {
   try {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
@@ -46,6 +46,27 @@ router.get('/getnotes', fetchuser, async (req, res) => {
 });
 
 
+// Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
+router.get('/getnotes/:noteId', fetchuser, async (req, res) => {
+  try {
+    let noteId = req.params.noteId;
+    let note = await Notes.findById({ _id: noteId });
+    // let note = await Notes.find();
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Posts of this id fetched successfully',
+      data: note
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
+
+});
+
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 
 router.post('/addnotes', fetchuser, [
@@ -56,7 +77,7 @@ router.post('/addnotes', fetchuser, [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-    logActivity("add post", "Failed validation for adding post", "error",req.user ? req.user.id : null);
+    logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -129,7 +150,7 @@ router.post('/addnotes', fetchuser, [
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("add post", "Error adding post: " + error.message, "error",req.user ? req.user.id : null);
+    logActivity("add post", "Error adding post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -210,7 +231,7 @@ router.put('/updatenote/:id', fetchuser, [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-    logActivity("update post", "Failed validation for updating post", "error",req.user ? req.user.id : null);
+    logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -268,7 +289,7 @@ router.put('/updatenote/:id', fetchuser, [
 
   } catch (error) {
     console.log(error.message);
-    logActivity("update post", "Error update post: " + error.message, "error",req.user ? req.user.id : null);
+    logActivity("update post", "Error update post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -296,9 +317,14 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
-    // Delete the note
-    await note.remove();
-    logActivity("delete post", "Post deleted successfully", "success", req.user ? req.user.id : null);
+    // Delete the post and its additionalDetails
+    await Promise.all([
+      Notes.findByIdAndRemove(noteId),
+      deleteAdditionalDetails(noteId),
+      logActivity("delete post", "Post deleted successfully", "success", req.user ? req.user.id : null)
+      
+    ]);
+
 
     res.status(200).send({
       status: STATUS_CODES[200],
@@ -306,13 +332,25 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("delete post", "Error deleting post: " + error.message, "error",req.user ? req.user.id : null);
+    logActivity("delete post", "Error deleting post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
     });
   }
 });
+
+// Middleware to delete additionalDetails associated with that note
+const deleteAdditionalDetails = async (noteId) => {
+  try {
+    // You can also delete subtags from a separate collection if they are stored that way
+    await AdditionalDetails.deleteMany({ noteId: noteId });
+
+  } catch (error) {
+    console.error("Error deleting Additional Details:", error);
+    throw error;
+  }
+};
 
 
 

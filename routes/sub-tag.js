@@ -125,5 +125,37 @@ router.delete('/deletesubtag/:id', [fetchuser, checkAdminRole], async (req, res)
 });
 
 
+// Delete subtag: DELETE "/api/notes/deletesubtag/:id". Login toBeRequired.
+router.get('/subtags/:tagId',fetchuser, async (req, res) => {
+  try {
+      let subtags = await SubTags.find({tagId : req.params.tagId});
+      // console.log(subtags)
+
+      // Check if the subtag exists
+      if (!subtags) {
+          return res.status(404).json({ msg: 'Subtag not found' });
+      }
+
+      // Check if the user is authorized to delete the subtag
+      // if (subtag.user.toString() !== req.user.id) {
+      //     return res.status(401).json({ msg: 'User not authorized' });
+      // }
+
+      res.status(200).send({
+        status:STATUS_CODES[200],
+        msg:"Subtag fetched successfully",
+        data:subtags
+      })
+
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
+});
+
+
 module.exports = router;
 
