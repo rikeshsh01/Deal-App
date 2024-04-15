@@ -1,6 +1,7 @@
 const Notes = require("../models/Notes");
 const AdditionalDetails = require("../models/AdditionalDetails")
 const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const  logActivity  = require("./loginfo");
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
@@ -55,6 +56,7 @@ router.post('/addnotes', fetchuser, [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
+    logActivity("add post", "Failed validation for adding post", "error",req.user ? req.user.id : null);
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -117,6 +119,7 @@ router.post('/addnotes', fetchuser, [
       await Promise.all(detailsPromises);
     }
 
+    logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
     res.status(200).send({
       status: STATUS_CODES[200],
       message: 'Posts added successfully',
@@ -126,6 +129,7 @@ router.post('/addnotes', fetchuser, [
     });
   } catch (error) {
     console.log(error.message);
+    logActivity("add post", "Error adding post: " + error.message, "error",req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -206,6 +210,7 @@ router.put('/updatenote/:id', fetchuser, [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
+    logActivity("update post", "Failed validation for updating post", "error",req.user ? req.user.id : null);
     return res.status(400).json({ errors: errors.array() });
   }
 
@@ -217,11 +222,13 @@ router.put('/updatenote/:id', fetchuser, [
 
     // Check if the note exists
     if (!note) {
+      logActivity("update post", "Post not found", "error", req.user ? req.user.id : null);
       return res.status(404).json({ msg: 'Note not found' });
     }
 
     // Check if the user owns the note
     if (note.user.toString() !== req.user.id) {
+      logActivity("update post", "not authorized", "error", req.user ? req.user.id : null);
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
@@ -248,9 +255,11 @@ router.put('/updatenote/:id', fetchuser, [
     const updatedNote = await note.save();
 
     if (!updatedNote) {
+      logActivity("update post", "Note not found or user unauthorized", "error", req.user ? req.user.id : null);
       return res.status(404).json({ status: STATUS_CODES[404], message: 'Note not found or user unauthorized' });
     }
 
+    logActivity("update post", "Post updated successfully", "success", req.user ? req.user.id : null);
     res.status(200).send({
       status: STATUS_CODES[200],
       message: 'Posts updated successfully',
@@ -259,6 +268,7 @@ router.put('/updatenote/:id', fetchuser, [
 
   } catch (error) {
     console.log(error.message);
+    logActivity("update post", "Error update post: " + error.message, "error",req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -276,16 +286,19 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
 
     // Check if the note exists
     if (!note) {
+      logActivity("delete post", "Post not found", "error", req.user ? req.user.id : null);
       return res.status(404).json({ msg: 'Note not found' });
     }
 
     // Check if the user owns the note
     if (note.user.toString() !== req.user.id) {
+      logActivity("delete post", "not authorized", "error", req.user ? req.user.id : null);
       return res.status(401).json({ msg: 'Not authorized' });
     }
 
     // Delete the note
     await note.remove();
+    logActivity("delete post", "Post deleted successfully", "success", req.user ? req.user.id : null);
 
     res.status(200).send({
       status: STATUS_CODES[200],
@@ -293,6 +306,7 @@ router.delete('/deletenote/:id', fetchuser, async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
+    logActivity("delete post", "Error deleting post: " + error.message, "error",req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
