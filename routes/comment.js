@@ -3,7 +3,7 @@ const Comments = require('../models/Comments');
 const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
 // Add comment to a post by multiple users: POST "/api/notes/:noteId/comments"
-router.post('/:noteId/addcomment', fetchuser, [
+router.post('/comment/:noteId', fetchuser, [
     body('content', "Description counld not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -46,7 +46,7 @@ router.post('/:noteId/addcomment', fetchuser, [
 });
 
 // Update a comment by a user: PUT "/api/notes/:noteId/comments/:commentId"
-router.put('/:noteId/updatecomment/:commentId', fetchuser, [
+router.put('/comment/:noteId/:commentId', fetchuser, [
     body('content', "Description cannot be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
     const errors = validationResult(req);
@@ -75,7 +75,7 @@ router.put('/:noteId/updatecomment/:commentId', fetchuser, [
         }
 
         // Update the comment
-        const updatedComment = await Comments.findByIdAndUpdate(req.params.commentId, { $set: { content: req.body.content } }, { new: true });
+        const updatedComment = await Comments.findByIdAndUpdate(req.params.commentId, { $set: { content: req.body.content, updated_at: new Date()  } }, { new: true });
 
         res.status(200).send({
             status:STATUS_CODES[200],
@@ -93,7 +93,7 @@ router.put('/:noteId/updatecomment/:commentId', fetchuser, [
 });
 
 // Delete a comment by a user: DELETE "/api/notes/:noteId/comments/:commentId"
-router.delete('/:noteId/deletecomment/:commentId', fetchuser, async (req, res) => {
+router.delete('/comment/:noteId/:commentId', fetchuser, async (req, res) => {
     try {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
@@ -131,7 +131,7 @@ router.delete('/:noteId/deletecomment/:commentId', fetchuser, async (req, res) =
 
 
 //Get comments of a note
-router.get('/:noteId/getcomments/', async (req,res)=>{
+router.get('/comment/:noteId', async (req,res)=>{
     try {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);

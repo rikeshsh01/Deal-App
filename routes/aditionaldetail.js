@@ -3,7 +3,7 @@ const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES 
 
 
 // Update additional detail by ID: put "/api/notes/updatedetail/:id". Login toBeRequired.
-router.put('/updateadditionaldetail/:id', fetchuser, async (req, res) => {
+router.put('/aditionaldetail/:id', fetchuser, async (req, res) => {
     try {
         const { key, value } = req.body;
         const detailId = req.params.id;
@@ -28,7 +28,7 @@ router.put('/updateadditionaldetail/:id', fetchuser, async (req, res) => {
 });
 
 // Delete additional detail by ID: delete "/api/notes/deletedetail/:id". Login toBeRequired.
-router.delete('/deleteadditionaldetail/:id', fetchuser, async (req, res) => {
+router.delete('/aditionaldetail/:id', fetchuser, async (req, res) => {
     try {
         const detailId = req.params.id;
 

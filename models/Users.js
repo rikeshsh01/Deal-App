@@ -11,6 +11,10 @@ const userSchema = new Schema({
         unique:true,
         required:true 
     },
+    phoneNumber : {
+        type:String,
+        require:true
+    },
     password: { 
         type: String, 
         required:true 
@@ -18,6 +22,10 @@ const userSchema = new Schema({
     roleId:{ 
         type:mongoose.Schema.Types.ObjectId,
         ref:"role"
+    },
+    verified:{
+        type:Boolean,
+        default: null 
     },
     created_at: { 
         type: Date, 

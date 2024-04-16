@@ -1,15 +1,44 @@
 const Users = require("../models/Users");
 const Roles = require("../models/Roles");
+const VerifyEmail = require("../models/VerifyEmail")
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
 var privateKey = "MynameisRicky";
-const  logActivity  = require("./loginfo");
+const logActivity = require("./loginfo");
+const nodemailer = require("nodemailer")
 
 const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
 
+// Create a Nodemailer transporter
+const transporter = nodemailer.createTransport({
+    host: 'smtp.ethereal.email',
+    port: 587,
+    auth: {
+        user: 'mac.stracke0@ethereal.email',
+        pass: '4D8GegRYYq6X3s2HDU'
+    }
+});
+
+// Function to send verification email
+const sendVerificationEmail = (email, verificationCode) => {
+    const mailOptions = {
+        from: "noreply.deal@gmail.com",
+        to: email,
+        subject: "Please verify your email address",
+        text: `Your verification code is: ${verificationCode}`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            console.error("Error sending email: ", error);
+        } else {
+            console.log("Email sent: ", info.response);
+        }
+    });
+};
 
 // Create a USER using POST "/api/auth/createuser". No login required
-router.post('/createuser', [
+router.post('/signup', [
     body('email').isEmail(),
     body('name').isLength({ min: 3 }),
     body('password').isLength({ min: 5 })
@@ -17,11 +46,11 @@ router.post('/createuser', [
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            logActivity("create user", "Failed validation for creating user", "error",req.user ? req.user.id : null);
+            logActivity("create user", "Failed validation for creating user", "error", req.user ? req.user.id : null);
             return res.status(400).json({ errors: errors.array() });
         }
 
-        const { name, email, password, roleId } = req.body;
+        const { name, email, phoneNumber, password, roleId } = req.body;
 
         // Check if the user with the email already exists
         let user = await Users.findOne({ email });
@@ -38,30 +67,90 @@ router.post('/createuser', [
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+        // Send verification email
+        sendVerificationEmail(email, verificationCode);
+
         // Create new user
         user = await Users.create({
             name,
             email,
             password: hashedPassword,
+            phoneNumber,
             roleId: roleId || defaultRoleId,
+            verified: false,
             created_at: new Date()
         });
 
-        logActivity("create user", "User created successfully", "success", req.user ? req.user.id : null);
-        res.status(201).json({
+        // Store verification code with user ID in VerifyEmail collection
+        await VerifyEmail.create({
+            code: verificationCode,
+            userId: user._id,
+            created_at: new Date()
+        });
+
+        logActivity("Email Verification", "Verification code created successfully", "success", req.user ? req.user.id : null);
+
+        res.status(200).json({
             success: true,
-            message: "User created successfully",
-            data: user
+            message: "Verification code sent successfully",
+            data: user._id,
+            verified: user.verified
         });
     } catch (error) {
         console.error(error.message);
-        logActivity("create user", "Error creating user: " + error.message, "error",req.user ? req.user.id : null);
+        logActivity("create user", "Error creating user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).json({
             status: STATUS_CODES[500],
-            message: error.message
+            message: error.message,
+
         });
     }
 });
+
+router.post('/verifyemail/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { verificationCode } = req.body;
+
+        // Validate inputs
+        if (!userId || !verificationCode) {
+            return res.status(400).json({ success: false, error: "Missing userId or verificationCode" });
+        }
+
+        // Find user and verification record in parallel
+        const [user, verifyEmail] = await Promise.all([
+            Users.findById(userId),
+            VerifyEmail.findOne({ userId })
+        ]);
+
+        // Check if user and verification record exist
+        if (!user || !verifyEmail) {
+            return res.status(404).json({ success: false, error: "User or verification record not found" });
+        }
+
+        // Check if verification code matches
+        if (verifyEmail.code !== verificationCode) {
+            return res.status(400).json({ success: false, error: "Invalid verification code" });
+        }
+        // Update user status to verified
+        user.verified = true;
+        const userData = await user.save();
+
+        // Email verified successfully
+        res.status(200).json({
+            success: true,
+            message: "Email verified successfully",
+            data: userData // Return user data if needed
+        });
+    } catch (error) {
+        console.error("Error verifying email:", error);
+        res.status(500).json({ success: false, error: "Internal server error" });
+    }
+});
+
 
 
 // Authenticate a USER using POST "/api/auth/login". No login required
@@ -82,7 +171,7 @@ router.post('/login', [
         const user = await Users.findOne({ email });
 
         if (!user) {
-            logActivity("login", "Attempt to login with wrong email", "error",req.user ? req.user.id : null);
+            logActivity("login", "Attempt to login with wrong email", "error", req.user ? req.user.id : null);
             return res.status(400).json({ success: false, error: "User does not exist" });
         }
 
@@ -93,11 +182,16 @@ router.post('/login', [
             return res.status(400).json({ success: false, error: "Password does not match" });
         }
 
+        if (user.verified === false) {
+            logActivity("login", "User is not verified yet", "error", req.user ? req.user.id : null);
+            return res.status(400).json({ success: false, error: "User is not verified yet" });
+        }
+
         // Generate JWT token
         const payload = {
             user: {
                 id: user.id,
-                role: user.role
+                roleId: user.roleId
             }
         };
         const authToken = jwt.sign(payload, privateKey);
@@ -108,10 +202,10 @@ router.post('/login', [
             message: "User authenticated successfully",
             authToken: authToken
         });
-        logActivity("Login", "User authenticated successfully","success", req.user ? req.user.id : null)
+        logActivity("Login", "User authenticated successfully", "success", req.user ? req.user.id : null)
     } catch (error) {
         console.error(error.message);
-        logActivity("login", "Error logging in: " + error.message, "error",req.user ? req.user.id : null);
+        logActivity("login", "Error logging in: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).json({
             status: STATUS_CODES[500],
             message: error.message
@@ -119,31 +213,8 @@ router.post('/login', [
     }
 });
 
-
 // Get USER data using POST "/api/auth/getuser". login required
-router.get('/getuser', fetchuser, async (req, res) => {
-    try {
-        userId = req.user.id;
-        const user = await Users.findById(userId).select("-password");
-
-        res.status(200).send({
-            status: STATUS_CODES[200],
-            msg: "Auth user data",
-            data: user
-        });
-
-    } catch (error) {
-        console.log(error.message);
-        res.status(500).send({
-            status: STATUS_CODES[500],
-            message: error.message
-        });
-
-    }
-});
-
-// Get USER data using POST "/api/auth/getuser". login required
-router.post('/getuser', [fetchuser, checkAdminRole], async (req, res) => {
+router.get('/user', [fetchuser, checkAdminRole], async (req, res) => {
     try {
         const user = await Users.find().select("-password");
         res.status(200).send({
@@ -162,4 +233,24 @@ router.post('/getuser', [fetchuser, checkAdminRole], async (req, res) => {
     }
 });
 
+
+// Get my user data. login required
+router.get('/myuser', fetchuser, async (req, res) => {
+    try {
+        const user = await Users.findById(req.user.id).select("-password");
+        res.status(200).send({
+            status: STATUS_CODES[200],
+            msg: "Users data",
+            data: user
+        });
+
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
+
+    }
+});
 module.exports = router;

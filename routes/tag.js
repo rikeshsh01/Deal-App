@@ -5,7 +5,7 @@ const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES }
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addtags', [fetchuser, checkAdminRole], [
+router.post('/tag', [fetchuser, checkAdminRole], [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
 ], async (req, res) => {
@@ -19,7 +19,7 @@ router.post('/addtags', [fetchuser, checkAdminRole], [
   try {
     const { title, description } = req.body;
     const tag = new Tags({
-      title, description
+      title, description,created_at: new Date()
     })
 
     const saveTag = await tag.save();
@@ -43,7 +43,7 @@ router.post('/addtags', [fetchuser, checkAdminRole], [
 
 
 // Get all tags using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/fetchalltags', [fetchuser, checkAdminRole], async (req, res) => {
+router.get('/tag', [fetchuser, checkAdminRole], async (req, res) => {
   try {
     // Fetch all sub-tags and populate the "tagId" field with the "_id" field of the Tags collection
     let subTags = await SubTags.find().populate("_id");
@@ -88,7 +88,7 @@ router.get('/fetchalltags', [fetchuser, checkAdminRole], async (req, res) => {
 
 
 // Update tag using: put "/api/notes/updatetags/:id". Login to be required.
-router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
+router.put('/tag/:id', [fetchuser, checkAdminRole], [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -105,8 +105,12 @@ router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
 
     if (title) tagFields.title = title;
     if (description) tagFields.description = description;
+    tagFields.updated_at = new Date();
+    
 
     let tag = await Tags.findById(req.params.id);
+
+  
 
     // Check if the tag exists
     if (!tag) {
@@ -137,7 +141,7 @@ router.put('/updatetags/:id', [fetchuser, checkAdminRole], [
 
 
 // Delete a tag using: delete "/api/notes/deletetags/:id". Login to be required.
-router.delete('/deletetags/:id', [fetchuser, checkAdminRole], async (req, res) => {
+router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
   try {
     const tagId = req.params.id;
     const tag = await Tags.findById(tagId);

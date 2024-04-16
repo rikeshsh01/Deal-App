@@ -3,7 +3,7 @@ const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES }
 
 
 // Create notesusing: post "/api/notes/addtags". Login toBeRequired. 
-router.post('/addsubtags',[fetchuser, checkAdminRole] , [
+router.post('/subtag',[fetchuser, checkAdminRole] , [
     body('title',"Enter Valid Title").isLength({ min: 3 }),
     body('description', "Description counld not be less than 5 charecter").isLength({ min: 5 })
   ], async (req, res) => {
@@ -16,7 +16,7 @@ router.post('/addsubtags',[fetchuser, checkAdminRole] , [
     try {
       const {title,description,tagId} = req.body;
       const subtag= new SubTags({
-        title,description,tagId
+        title,description,tagId, created_at:new Date()
       });
   
       const saveSubTag = await subtag.save();
@@ -39,7 +39,7 @@ router.post('/addsubtags',[fetchuser, checkAdminRole] , [
 
 
   // Update subtag: PUT "/api/notes/updatesubtag/:id". Login toBeRequired.
-router.put('/updatesubtag/:id', [fetchuser, checkAdminRole], [
+router.put('/subtag/:id', [fetchuser, checkAdminRole], [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -56,6 +56,7 @@ router.put('/updatesubtag/:id', [fetchuser, checkAdminRole], [
       if (title) subtagFields.title = title;
       if (description) subtagFields.description = description;
       if (tagId) subtagFields.tagId = tagId;
+      subtagFields.updated_at = new Date();
 
       let subtag = await SubTags.findById(req.params.id);
 
@@ -93,7 +94,7 @@ router.put('/updatesubtag/:id', [fetchuser, checkAdminRole], [
 
 
 // Delete subtag: DELETE "/api/notes/deletesubtag/:id". Login toBeRequired.
-router.delete('/deletesubtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
+router.delete('/subtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
   try {
       let subtag = await SubTags.findById(req.params.id);
 
@@ -126,7 +127,7 @@ router.delete('/deletesubtag/:id', [fetchuser, checkAdminRole], async (req, res)
 
 
 // Delete subtag: DELETE "/api/notes/deletesubtag/:id". Login toBeRequired.
-router.get('/subtags/:tagId',fetchuser, async (req, res) => {
+router.get('/subtag/:tagId',fetchuser, async (req, res) => {
   try {
       let subtags = await SubTags.find({tagId : req.params.tagId});
       // console.log(subtags)

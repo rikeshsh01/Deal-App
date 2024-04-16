@@ -5,7 +5,7 @@ const logActivity = require("./loginfo");
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/getallnotes', async (req, res) => {
+router.get('/post', async (req, res) => {
   try {
     // let note = await Notes.find({ user: req.user.id });
     let note = await Notes.find();
@@ -26,7 +26,30 @@ router.get('/getallnotes', async (req, res) => {
 
 
 // Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
-router.get('/getnotes', fetchuser, async (req, res) => {
+router.get('/post/:userId', fetchuser, async (req, res) => {
+  try {
+    let userId = req.params.userId;
+    let note = await Notes.find({ userId: userId });
+    // let note = await Notes.find();
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Posts of this user fetched successfully',
+      data: note
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
+
+});
+
+
+
+// Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
+router.get('/mypost', fetchuser, async (req, res) => {
   try {
     let note = await Notes.find({ user: req.user.id });
     // let note = await Notes.find();
@@ -46,30 +69,9 @@ router.get('/getnotes', fetchuser, async (req, res) => {
 });
 
 
-// Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
-router.get('/getnotes/:noteId', fetchuser, async (req, res) => {
-  try {
-    let noteId = req.params.noteId;
-    let note = await Notes.findById({ _id: noteId });
-    // let note = await Notes.find();
-    res.status(200).send({
-      status: STATUS_CODES[200],
-      message: 'Posts of this id fetched successfully',
-      data: note
-    });
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
-    });
-  }
-
-});
-
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 
-router.post('/addnotes', fetchuser, [
+router.post('/post', fetchuser, [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -223,7 +225,7 @@ router.delete('/deletenote/:id',fetchuser, async (req, res) => {
 */
 
 // Update notes using: put "/api/notes/updatenote/:id". Login to be required.
-router.put('/updatenote/:id', fetchuser, [
+router.put('/post/:id', fetchuser, [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -299,7 +301,7 @@ router.put('/updatenote/:id', fetchuser, [
 
 
 // Delete notes using: delete "/api/notes/deletenote/:id". Login to be required.
-router.delete('/deletenote/:id', fetchuser, async (req, res) => {
+router.delete('/post/:id', fetchuser, async (req, res) => {
   try {
     const noteId = req.params.id;
 

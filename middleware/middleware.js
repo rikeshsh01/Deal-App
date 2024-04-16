@@ -1,5 +1,6 @@
 var jwt = require('jsonwebtoken');
 var privateKey = "MynameisRicky";
+const Roles = require("../models/Roles")
 
 const fetchuser = (req,res,next)=>{
     // Get the user from jwt token and id to req object 
@@ -17,8 +18,11 @@ const fetchuser = (req,res,next)=>{
 
 }
 
-const checkAdminRole = (req, res, next) => {
-    if (req.user && req.user.role === 'Admin') {
+const checkAdminRole = async (req, res, next) => {
+    let roleTitle = await Roles.findById(req.user.roleId)
+    console.log(roleTitle)
+
+    if (req.user && roleTitle.title === 'Admin') {
         next();
     } else {
         res.status(403).send({error: "Unauthorized access. Admin role required."});
