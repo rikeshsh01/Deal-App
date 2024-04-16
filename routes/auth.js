@@ -3,11 +3,15 @@ const Roles = require("../models/Roles");
 const VerifyEmail = require("../models/VerifyEmail")
 var bcrypt = require('bcryptjs');
 var jwt = require('jsonwebtoken');
-var privateKey = "MynameisRicky";
+const privateKey = process.env.PRIVATE_KEY;
 const logActivity = require("./loginfo");
 const nodemailer = require("nodemailer")
 
-const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const express = require("express");
+const router = express.Router();
+const { fetchuser, checkAdminRole } = require("../middleware/middleware");
+const { body, validationResult } = require('express-validator');
+const { STATUS_CODES } = require("http");
 
 // Create a Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -194,8 +198,9 @@ router.post('/login', [
                 roleId: user.roleId
             }
         };
-        const authToken = jwt.sign(payload, privateKey);
 
+        const authToken = jwt.sign(payload, privateKey);
+        
         logActivity("login", "Login successfull", "success", req.user ? req.user.id : null);
         res.status(200).json({
             success: true,

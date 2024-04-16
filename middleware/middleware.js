@@ -1,5 +1,5 @@
 var jwt = require('jsonwebtoken');
-var privateKey = "MynameisRicky";
+var privateKey = process.env.PRIVATE_KEY;
 const Roles = require("../models/Roles")
 
 const fetchuser = (req,res,next)=>{

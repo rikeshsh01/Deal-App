@@ -1,5 +1,8 @@
 const AdditionalDetails = require("../models/AdditionalDetails")
-const { router, fetchuser, checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const express = require("express");
+const router = express.Router();
+const { fetchuser, checkAdminRole } = require("../middleware/middleware");
+const { STATUS_CODES } = require("http");
 
 
 // Update additional detail by ID: put "/api/notes/updatedetail/:id". Login toBeRequired.

@@ -1,5 +1,8 @@
 const Notes = require("../models/Notes");
-const { router, fetchuser,checkAdminRole, body, validationResult, STATUS_CODES } = require('./import');
+const express = require("express");
+const router = express.Router();
+const { fetchuser, checkAdminRole } = require("../middleware/middleware");
+const { STATUS_CODES } = require("http");
 
 // Define the route for searching notes
 router.get('/search', async (req, res) => {
