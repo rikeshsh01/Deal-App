@@ -17,9 +17,24 @@ const fs = require("fs")
 
 
 // for multiple image upload
+
+// Specify the destination folder
+const uploadDir = path.join(__dirname, '../images/post');
+
+// Create directory fo image 
+fs.promises.mkdir(uploadDir, { recursive: true })
+  .then(() => console.log('Upload directory created successfully'))
+  .catch(err => console.error('Error creating upload directory:', err));
+
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, './images/post'); // Specify the destination folder for uploaded images
+
+    // Check if uploads folder exists, if not, create it
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname); // Rename the file to prevent collisions
@@ -54,25 +69,52 @@ router.get('/post', async (req, res) => {
     let users = await Users.find();
 
     // Map each note to include its comments
-    let notesWithComments = notes.map(note => {
+    // let notesWithComments = notes.map(note => {
+    //   // Find comments for this note
+    //   let noteComments = comments.filter(comment => comment.noteId.toString() === note._id.toString());
+    //   let userDetails = users.filter(user => note.userId.toString() === user._id.toString())
+    //   console.log(userDetails)
 
+    //   // Add comments to the note object
+    //   return {
+    //     ...note.toObject(), // Convert Mongoose document to plain JavaScript object
+    //     comments: noteComments,
+    //     userDetails: userDetails
+    //   };
+    // });
+
+    // Map each note to include its comments and user details
+    let notesWithCommentsAndUserDetails = notes.map(note => {
       // Find comments for this note
       let noteComments = comments.filter(comment => comment.noteId.toString() === note._id.toString());
-      let userDetails = users.filter(user => note.userId.toString() === user._id.toString())
-      console.log(userDetails)
 
-      // Add comments to the note object
+      // Map each comment to include user details
+      let commentsWithUserDetails = noteComments.map(comment => {
+        // Find user details for this comment's userId
+        let commentUserDetails = users.find(user => user._id.toString() === comment.userId.toString());
+
+        // Return comment object with user details
+        return {
+          ...comment.toObject(), // Convert Mongoose document to plain JavaScript object
+          userDetails: commentUserDetails
+        };
+      });
+
+      // Find user details for this note's userId
+      let noteUserDetails = users.find(user => user._id.toString() === note.userId.toString());
+
+      // Add comments with user details and post user details to the note object
       return {
         ...note.toObject(), // Convert Mongoose document to plain JavaScript object
-        comments: noteComments,
-        userDetails: userDetails
+        userDetails: noteUserDetails,
+        comments: commentsWithUserDetails
       };
     });
 
     res.status(200).send({
       status: STATUS_CODES[200],
       message: 'Notes fetched successfully',
-      data: notesWithComments
+      data: notesWithCommentsAndUserDetails
     });
   } catch (error) {
     console.log(error.message);
@@ -157,7 +199,7 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     path: file.path,
     size: file.size,
     mimetype: file.mimetype,
-    url: `http://localhost:8080/${file.path}`
+    url: `http://localhost:8080/images/post/${file.filename}`
   }));
 
   console.log(images)
@@ -217,73 +259,6 @@ router.post('/post', fetchuser, upload.array('image', 12), [
   }
 });
 
-/*
-// Update notes using: put "/api/notes/updatenote/:id". Login to be required.
-router.put('/post/:id', fetchuser, [
-  body('title', "Enter Valid Title").isLength({ min: 3 }),
-  body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
-], async (req, res) => {
-  const errors = validationResult(req);
-
-  // Check whether there are any validation errors
-  if (!errors.isEmpty()) {
-    logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
-    return res.status(400).json({ errors: errors.array() });
-  }
-
-  try {
-    const { title, description, tag, latitude, longitude, location } = req.body;
-    const noteId = req.params.id;
-
-    let note = await Notes.findById(noteId);
-
-    console.log(note)
-
-    // Check if the note exists
-    if (!note) {
-      logActivity("update post", "Post not found", "error", req.user ? req.user.id : null);
-      return res.status(404).json({ msg: 'Note not found' });
-    }
-
-    // Check if the user owns the note
-    if (note.user.toString() !== req.user.id) {
-      logActivity("update post", "not authorized", "error", req.user ? req.user.id : null);
-      return res.status(401).json({ msg: 'Not authorized' });
-    }
-
-    // Update the note fields
-    note.title = title;
-    note.description = description;
-    note.tag = tag;
-    note.latitude = latitude;
-    note.longitude = longitude;
-    note.location = location;
-    note.updated_at = new Date();
-
-    const updatedNote = await note.save();
-
-    if (!updatedNote) {
-      logActivity("update post", "Note not found or user unauthorized", "error", req.user ? req.user.id : null);
-      return res.status(404).json({ status: STATUS_CODES[404], message: 'Note not found or user unauthorized' });
-    }
-
-    logActivity("update post", "Post updated successfully", "success", req.user ? req.user.id : null);
-    res.status(200).send({
-      status: STATUS_CODES[200],
-      message: 'Posts updated successfully',
-      data: updatedNote
-    });
-
-  } catch (error) {
-    console.log(error.message);
-    logActivity("update post", "Error update post: " + error.message, "error", req.user ? req.user.id : null);
-    res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
-    });
-  }
-});
-*/
 
 // Update notes using: put "/api/notes/updatenotes/:id". Login to be required.
 router.put('/post/:id', fetchuser, upload.array('image', 12), [
@@ -298,21 +273,8 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  // Access uploaded files
-  const files = req.files;
-
-  // Save image metadata to the database
-  const images = files ? files.map(file => ({
-    originalname: file.originalname,
-    filename: file.filename,
-    path: file.path,
-    size: file.size,
-    mimetype: file.mimetype,
-    url: `http://localhost:8080/${file.path}`
-  })) : [];
-
   try {
-    const { title, description, tag, latitude, longitude, location, additionalDetails } = req.body;
+    const { title, description, tag, latitude, longitude, location } = req.body;
     const noteId = req.params.id;
 
     // Find the note by ID
@@ -331,7 +293,9 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     note.longitude = longitude;
     note.location = location;
 
-    console.log(note.image)
+    // console.log(note.image)
+    // Access uploaded files
+    const files = req.files;
 
     // Update images if new images are provided
     if (files && files.length > 0) {
@@ -341,7 +305,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
         path: file.path,
         size: file.size,
         mimetype: file.mimetype,
-        url: `http://localhost:8080/${file.path}`
+        url: `http://localhost:8080/images/post/${file.filename}`
       }));
 
       note.image = [...note.image, ...images]; // Append new images to existing images
@@ -436,25 +400,25 @@ router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
     if (!note) {
       return res.status(404).json({ msg: 'Note not found' });
     }
-     // Find the index of the image with the given ID
-     const imageIndex = note.image.findIndex(image => image.id === imageId);
+    // Find the index of the image with the given ID
+    const imageIndex = note.image.findIndex(image => image.id === imageId);
 
-     // Check if the image exists
-     if (imageIndex === -1) {
-       return res.status(404).json({ msg: 'Image not found' });
-     }
+    // Check if the image exists
+    if (imageIndex === -1) {
+      return res.status(404).json({ msg: 'Image not found' });
+    }
 
-     // Get the filename or filepath of the image
-    const filename = note.image[imageIndex].filename; 
+    // Get the filename or filepath of the image
+    const filename = note.image[imageIndex].filename;
 
     const parentDir = path.dirname(__dirname);
-    const imageDir = path.join(parentDir,'./images/post')
- 
+    const imageDir = path.join(parentDir, './images/post')
+
     //  // Remove the image from the array
-     note.image.splice(imageIndex, 1);
- 
+    note.image.splice(imageIndex, 1);
+
     //  // Save the updated note
-     await note.save();
+    await note.save();
 
     //  // Delete the image file from the server
     fs.unlink((path.join(imageDir, filename)), (err) => {

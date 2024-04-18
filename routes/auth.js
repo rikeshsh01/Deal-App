@@ -6,7 +6,9 @@ var jwt = require('jsonwebtoken');
 const privateKey = process.env.PRIVATE_KEY;
 const logActivity = require("./loginfo");
 const nodemailer = require("nodemailer")
-const multer = require('multer')
+const multer = require('multer');
+const path = require("path");
+const fs = require("fs")
 
 const express = require("express");
 const router = express.Router();
@@ -44,6 +46,15 @@ const sendVerificationEmail = (email, verificationCode) => {
 
 
 // for multiple image upload
+
+// Specify the destination folder
+const uploadDir = path.join(__dirname, '../images/profile');
+
+// Create directory fo image 
+fs.promises.mkdir(uploadDir, { recursive: true })
+    .then(() => console.log('Upload directory created successfully'))
+    .catch(err => console.error('Error creating upload directory:', err));
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         cb(null, './images/profile'); // Specify the destination folder for uploaded images
@@ -118,7 +129,7 @@ router.post('/signup', upload.array('image', 1), [
             path: file.path,
             size: file.size,
             mimetype: file.mimetype,
-            url:`http://localhost:8080/${file.path}`
+            url:`http://localhost:8080/images/profile/${file.filename}`
           }));
 
         // Create new user

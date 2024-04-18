@@ -24,7 +24,10 @@ const userSchema = new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"role"
     },
-    image:[ImageSchema],
+    image: {
+        type: [ImageSchema],
+        default: []
+    },
     verified:{
         type:Boolean,
         default: null 
