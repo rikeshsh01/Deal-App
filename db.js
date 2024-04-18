@@ -1,8 +1,5 @@
 const mongoose = require("mongoose");
-
-const DB_HOST = process.env.DB_HOST;
-const DB_NAME = process.env.DB_NAME;
-const mongoURI = `${DB_HOST}/${DB_NAME}?directConnection=true`;
+const mongoURI = "mongodb://127.0.0.1:27017/Deal?directConnection=true";
 mongoose.set('strictQuery', true);
 const connectToMongo = ()=>{
     mongoose.connect(mongoURI,()=>{

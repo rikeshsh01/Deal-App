@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
+const ImageSchema = require("./Image")
 
 const userSchema = new Schema({
     name: { 
@@ -23,6 +24,7 @@ const userSchema = new Schema({
         type:mongoose.Schema.Types.ObjectId,
         ref:"role"
     },
+    image:[ImageSchema],
     verified:{
         type:Boolean,
         default: null 

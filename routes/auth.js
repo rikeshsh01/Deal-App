@@ -6,6 +6,7 @@ var jwt = require('jsonwebtoken');
 const privateKey = process.env.PRIVATE_KEY;
 const logActivity = require("./loginfo");
 const nodemailer = require("nodemailer")
+const multer = require('multer')
 
 const express = require("express");
 const router = express.Router();
@@ -41,8 +42,35 @@ const sendVerificationEmail = (email, verificationCode) => {
     });
 };
 
+
+// for multiple image upload
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, './images/profile'); // Specify the destination folder for uploaded images
+    },
+    filename: function (req, file, cb) {
+        cb(null, Date.now() + '-' + file.originalname); // Rename the file to prevent collisions
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    // Accept only images
+    if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+    } else {
+        cb(new Error('Only images are allowed!'), false);
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 1024 * 1024 * 5 }, // Limit file size to 5MB
+    fileFilter: fileFilter
+});
+
+
 // Create a USER using POST "/api/auth/createuser". No login required
-router.post('/signup', [
+router.post('/signup', upload.array('image', 1), [
     body('email').isEmail(),
     body('name').isLength({ min: 3 }),
     body('password').isLength({ min: 5 })
@@ -77,6 +105,22 @@ router.post('/signup', [
         // Send verification email
         sendVerificationEmail(email, verificationCode);
 
+        let file = req.files;
+        console.log(file)
+
+        if (!file || file.length === 0) {
+            return res.status(400).json({ error: 'No files uploaded!' });
+        }
+
+        const images = req.files.map(file => ({
+            originalname: file.originalname,
+            filename: file.filename,
+            path: file.path,
+            size: file.size,
+            mimetype: file.mimetype,
+            url:`http://localhost:8080/${file.path}`
+          }));
+
         // Create new user
         user = await Users.create({
             name,
@@ -84,6 +128,7 @@ router.post('/signup', [
             password: hashedPassword,
             phoneNumber,
             roleId: roleId || defaultRoleId,
+            image: images,
             verified: false,
             created_at: new Date()
         });
@@ -200,7 +245,7 @@ router.post('/login', [
         };
 
         const authToken = jwt.sign(payload, privateKey);
-        
+
         logActivity("login", "Login successfull", "success", req.user ? req.user.id : null);
         res.status(200).json({
             success: true,

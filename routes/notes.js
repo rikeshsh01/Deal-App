@@ -1,22 +1,78 @@
-const Notes = require("../models/Notes");
-const AdditionalDetails = require("../models/AdditionalDetails")
 const express = require("express");
 const router = express.Router();
+const Notes = require("../models/Notes");
+const AdditionalDetails = require("../models/AdditionalDetails")
+const Comments = require("../models/Comments")
+const Users = require("../models/Users")
 const { fetchuser, checkAdminRole } = require("../middleware/middleware");
 const { body, validationResult } = require('express-validator');
 const { STATUS_CODES } = require("http");
 const logActivity = require("./loginfo");
+const multer = require('multer');
+const path = require("path")
+const fs = require("fs")
+
+
+
+
+
+// for multiple image upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, './images/post'); // Specify the destination folder for uploaded images
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + '-' + file.originalname); // Rename the file to prevent collisions
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Accept only images
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Only images are allowed!'), false);
+  }
+};
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 1024 * 1024 * 5 }, // Limit file size to 5MB
+  fileFilter: fileFilter
+});
+
 
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
 router.get('/post', async (req, res) => {
   try {
-    // let note = await Notes.find({ user: req.user.id });
-    let note = await Notes.find();
+    // Fetch all notes
+    let notes = await Notes.find();
+
+    // Fetch all comments
+    let comments = await Comments.find();
+    let users = await Users.find();
+
+    // Map each note to include its comments
+    let notesWithComments = notes.map(note => {
+
+      // Find comments for this note
+      let noteComments = comments.filter(comment => comment.noteId.toString() === note._id.toString());
+      let userDetails = users.filter(user => note.userId.toString() === user._id.toString())
+      console.log(userDetails)
+
+      // Add comments to the note object
+      return {
+        ...note.toObject(), // Convert Mongoose document to plain JavaScript object
+        comments: noteComments,
+        userDetails: userDetails
+      };
+    });
+
     res.status(200).send({
       status: STATUS_CODES[200],
       message: 'Notes fetched successfully',
-      data: note
+      data: notesWithComments
     });
   } catch (error) {
     console.log(error.message);
@@ -75,7 +131,7 @@ router.get('/mypost', fetchuser, async (req, res) => {
 
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 
-router.post('/post', fetchuser, [
+router.post('/post', fetchuser, upload.array('image', 12), [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
   body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
 ], async (req, res) => {
@@ -87,45 +143,42 @@ router.post('/post', fetchuser, [
     return res.status(400).json({ errors: errors.array() });
   }
 
+  // Access uploaded files
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'No files uploaded!' });
+  }
+
+  // Save image metadata to the database
+  const images = req.files.map(file => ({
+    originalname: file.originalname,
+    filename: file.filename,
+    path: file.path,
+    size: file.size,
+    mimetype: file.mimetype,
+    url: `http://localhost:8080/${file.path}`
+  }));
+
+  console.log(images)
+
+
+
   try {
-    const { title, description, tag, image, latitude, longitude, location, additionalDetails } = req.body;
+    const { title, description, tag, latitude, longitude, location, additionalDetails } = req.body;
     let note;
     note = new Notes({
+      userId: req.user.id,
       title,
       description,
       tag,
-      image,
+      image: images,
       latitude,
       longitude,
       location,
-      user: req.user.id,
       created_at: new Date(),
     });
 
-    /*
-    if (image) {
-      // If image is provided, convert it to Buffer and store in the database
-      const imageBuffer = Buffer.from(image, 'base64'); // Assuming the image is sent as base64 encoded string
-      note = new Notes({
-        title,
-        description,
-        tag,
-        image: {
-          data: imageBuffer,
-          contentType: 'image/png' // You may need to adjust the content type based on the image type
-        },
-        user: req.user.id
-      });
-    } else {
-      // If no image is provided, create the note without the image field
-      note = new Notes({
-        title,
-        description,
-        tag,
-        user: req.user.id
-      });
-    }
-    */
     const saveNote = await note.save();
     let savedAdditionalDetails = [];
 
@@ -165,69 +218,6 @@ router.post('/post', fetchuser, [
 });
 
 /*
-
-// Update notes using: post "/api/notes/updatenotes". Login to Be Required. 
-router.put('/updatenotes/:id',fetchuser, async (req, res) => {
-  try {
-    const {title,description,tag} = req.body;
-    console.log(title);
-    
-    // create newNote Object 
-    const newNote = {};
-    if(title){newNote.title=title}
-    if(description){newNote.description=description}
-    if(tag){newNote.tag=tag}
-
-    // find the note to be updated and update it 
-    let note = await Notes.findById(req.params.id);
-
-    if (!note) {
-      return res.status(404).send("Not Found");
-    }
-
-    if (note.user.toString()!==req.user.id) {
-      return res.status(401).send("Not allowed");
-    }
-
-    note = await Notes.findByIdAndUpdate(req.params.id,{$set:newNote},{new:true});
-    res.json({note});
-    
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).send("Enternal Server Error");
-  }
-
-
-});
-
-
-// Delete notes using: Delete "/api/notes/deletenote". Login to Be Required. 
-router.delete('/deletenote/:id',fetchuser, async (req, res) => {
-
-  try {
-    // find the note to be delete and delete it 
-    let note = await Notes.findById(req.params.id);
-
-    if (!note) {
-      return res.status(404).send("Not Found");
-    }
-    // allowed deletion if user owns notes 
-    if (note.user.toString()!==req.user.id) {
-      return res.status(401).send("Not allowed");
-    }
-
-    note = await Notes.findByIdAndDelete(req.params.id);
-    res.json({"Success":"Notes Deleted", note:note});
-    
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).send("Enternal Server Error");
-  }
-
-
-});
-*/
-
 // Update notes using: put "/api/notes/updatenote/:id". Login to be required.
 router.put('/post/:id', fetchuser, [
   body('title', "Enter Valid Title").isLength({ min: 3 }),
@@ -242,10 +232,12 @@ router.put('/post/:id', fetchuser, [
   }
 
   try {
-    const { title, description, tag, image, latitude, longitude, location } = req.body;
+    const { title, description, tag, latitude, longitude, location } = req.body;
     const noteId = req.params.id;
 
     let note = await Notes.findById(noteId);
+
+    console.log(note)
 
     // Check if the note exists
     if (!note) {
@@ -263,21 +255,10 @@ router.put('/post/:id', fetchuser, [
     note.title = title;
     note.description = description;
     note.tag = tag;
-    note.image = image;
     note.latitude = latitude;
     note.longitude = longitude;
     note.location = location;
     note.updated_at = new Date();
-
-
-    // if (image) {
-    //   // If image is provided, convert it to Buffer and store in the database
-    //   const imageBuffer = Buffer.from(image, 'base64'); // Assuming the image is sent as base64 encoded string
-    //   note.image = {
-    //     data: imageBuffer,
-    //     contentType: 'image/png' // You may need to adjust the content type based on the image type
-    //   };
-    // }
 
     const updatedNote = await note.save();
 
@@ -296,6 +277,89 @@ router.put('/post/:id', fetchuser, [
   } catch (error) {
     console.log(error.message);
     logActivity("update post", "Error update post: " + error.message, "error", req.user ? req.user.id : null);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
+});
+*/
+
+// Update notes using: put "/api/notes/updatenotes/:id". Login to be required.
+router.put('/post/:id', fetchuser, upload.array('image', 12), [
+  body('title', "Enter Valid Title").isLength({ min: 3 }),
+  body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
+], async (req, res) => {
+  const errors = validationResult(req);
+
+  // Check whether there are any validation errors
+  if (!errors.isEmpty()) {
+    logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  // Access uploaded files
+  const files = req.files;
+
+  // Save image metadata to the database
+  const images = files ? files.map(file => ({
+    originalname: file.originalname,
+    filename: file.filename,
+    path: file.path,
+    size: file.size,
+    mimetype: file.mimetype,
+    url: `http://localhost:8080/${file.path}`
+  })) : [];
+
+  try {
+    const { title, description, tag, latitude, longitude, location, additionalDetails } = req.body;
+    const noteId = req.params.id;
+
+    // Find the note by ID
+    let note = await Notes.findById(noteId);
+
+    if (!note) {
+      logActivity("update post", "Post not found", "error", req.user ? req.user.id : null);
+      return res.status(404).json({ msg: 'Note not found' });
+    }
+
+    // Update the note fields
+    note.title = title;
+    note.description = description;
+    note.tag = tag;
+    note.latitude = latitude;
+    note.longitude = longitude;
+    note.location = location;
+
+    console.log(note.image)
+
+    // Update images if new images are provided
+    if (files && files.length > 0) {
+      const images = files.map(file => ({
+        originalname: file.originalname,
+        filename: file.filename,
+        path: file.path,
+        size: file.size,
+        mimetype: file.mimetype,
+        url: `http://localhost:8080/${file.path}`
+      }));
+
+      note.image = [...note.image, ...images]; // Append new images to existing images
+    }
+
+    // Save the updated note
+    await note.save();
+
+
+    logActivity("update post", "Post updated successfully", "success", req.user ? req.user.id : null);
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      message: 'Post updated successfully',
+      data: note,
+    });
+  } catch (error) {
+    console.log(error.message);
+    logActivity("update post", "Error updating post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -328,7 +392,7 @@ router.delete('/post/:id', fetchuser, async (req, res) => {
       Notes.findByIdAndRemove(noteId),
       deleteAdditionalDetails(noteId),
       logActivity("delete post", "Post deleted successfully", "success", req.user ? req.user.id : null)
-      
+
     ]);
 
 
@@ -358,6 +422,61 @@ const deleteAdditionalDetails = async (noteId) => {
   }
 };
 
+
+// Delete post image using:. Login toBeRequired.
+router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
+  try {
+    const imageId = req.params.imageId;
+    const noteId = req.params.noteId
+
+    // Find the note by ID
+    let note = await Notes.findById(noteId);
+
+    // Check if the note exists
+    if (!note) {
+      return res.status(404).json({ msg: 'Note not found' });
+    }
+     // Find the index of the image with the given ID
+     const imageIndex = note.image.findIndex(image => image.id === imageId);
+
+     // Check if the image exists
+     if (imageIndex === -1) {
+       return res.status(404).json({ msg: 'Image not found' });
+     }
+
+     // Get the filename or filepath of the image
+    const filename = note.image[imageIndex].filename; 
+
+    const parentDir = path.dirname(__dirname);
+    const imageDir = path.join(parentDir,'./images/post')
+ 
+    //  // Remove the image from the array
+     note.image.splice(imageIndex, 1);
+ 
+    //  // Save the updated note
+     await note.save();
+
+    //  // Delete the image file from the server
+    fs.unlink((path.join(imageDir, filename)), (err) => {
+      if (err) {
+        console.error('Error deleting image file:', err);
+        // Handle error if needed
+      }
+    });
+
+    res.status(200).send({
+      status: STATUS_CODES[200],
+      msg: "Image Deleted successfully",
+    });
+
+  } catch (error) {
+    console.log(error.message);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
+});
 
 
 module.exports = router;

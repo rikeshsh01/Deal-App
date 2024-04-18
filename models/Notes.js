@@ -1,30 +1,24 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
+const ImageSchema = require("./Image")
 
 const NotesSchema = new Schema({
-    userId:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"user"
+    userId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user"
     },
-    title: { 
-        type: String, 
-        required:true 
+    title: {
+        type: String,
+        required: true
     },
-    description: { 
-        type: String, 
-        required:true 
+    description: {
+        type: String,
+        required: true
     },
-    tag: { 
-        type: String, 
+    tag: {
+        type: String,
     },
-    image:{
-        type: String, 
-        required:true
-    },
-    // image: { 
-    //     data: Buffer, // Storing image data as Buffer
-    //     contentType: String // MIME type of the image
-    // },
+    image: [ImageSchema],
     latitude: {
         type: Number, // Latitude value
         required: true
@@ -37,19 +31,28 @@ const NotesSchema = new Schema({
         type: String, // Location name or description
         required: true
     },
-    created_at: { 
-        type: Date, 
+    likedUser: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "like"
+    }],
+    likeCount: {
+        type: Number,
+        required: true,
+        default: 0
+    },
+    created_at: {
+        type: Date,
         default: null
     },
-    updated_at: { 
-        type: Date, 
+    updated_at: {
+        type: Date,
         default: null
     },
-    deleted_at: { 
-        type: Date, 
-        default: null 
+    deleted_at: {
+        type: Date,
+        default: null
     }
 });
 
-const Note = mongoose.model("post",NotesSchema);
+const Note = mongoose.model("post", NotesSchema);
 module.exports = Note;

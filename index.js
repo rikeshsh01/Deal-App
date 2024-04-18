@@ -22,10 +22,15 @@ app.use("/api",require("./routes/role"));
 app.use("/api",require("./routes/search"));
 app.use("/api",require("./routes/comment"));
 app.use("/api",require("./routes/aditionaldetail"));
+app.use("/api",require("./routes/like"));
+app.use("/api",require("./routes/favourite"));
+
 
 // endpoints for seeding 
 app.use("/api",require("./seeder/seed"));
 
+// access image stored in server　
+app.use("/images", express.static("images"))
 
 app.listen(port, () => {
   console.log(`Deal app listening on port ${port}`)
