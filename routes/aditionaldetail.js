@@ -13,17 +13,23 @@ router.put('/aditionaldetail/:id', fetchuser, async (req, res) => {
 
         const updatedDetail = await AdditionalDetails.findOneAndUpdate({ _id: detailId }, { $set: { key, value, updated_at: new Date() } }, { new: true });
         if (!updatedDetail) {
-            return res.status(404).json({ status: STATUS_CODES[404], message: 'Additional detail not found' });
+            logActivity("Update additional detail", "Attempt to update additional details of a post", "error", req.user ? req.user.id : null);
+            return res.status(404).send({ 
+                status: STATUS_CODES[404], 
+                message: 'Additional detail not found' 
+            });
         }
 
-        res.status(200).json({
+        logActivity("Update additional detail", "Additional detail updated successfully", "success", req.user ? req.user.id : null);
+        res.status(200).send({
             status: STATUS_CODES[200],
             message: 'Additional detail updated successfully',
             data: updatedDetail
         });
     } catch (error) {
         console.error(error.message);
-        res.status(500).json({
+        logActivity("Update additional details", "Error updating additional details: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
         });
@@ -39,17 +45,21 @@ router.delete('/aditionaldetail/:id', fetchuser, async (req, res) => {
         const deletedDetail = await AdditionalDetails.findOneAndDelete({ _id: detailId });
 
         if (!deletedDetail) {
-            return res.status(404).json({ status: STATUS_CODES[404], message: 'Additional detail not found' });
+            return res.status(404).send({ 
+                status: STATUS_CODES[404], 
+                message: 'Additional detail not found' 
+            });
         }
 
-        res.status(200).json({
+        res.status(200).send({
             status: STATUS_CODES[200],
             message: 'Additional detail deleted successfully',
             data: deletedDetail
         });
     } catch (error) {
         console.error(error.message);
-        res.status(500).json({
+        logActivity("Delete additional detail", "Error deleting additional details: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
         });

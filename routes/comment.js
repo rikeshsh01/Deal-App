@@ -14,14 +14,14 @@ router.post('/comment/:noteId', fetchuser, [
 
     // Check for validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).send({ errors: errors.array() });
     }
 
     try {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
         if (!note) {
-            return res.status(404).json({ msg: 'Note not found' });
+            return res.status(404).send({ msg: 'Note not found' });
         }
 
         // Create a new comment
@@ -42,6 +42,7 @@ router.post('/comment/:noteId', fetchuser, [
           });
     } catch (error) {
         console.log(error.message);
+        logActivity("Create comment", "Error creating comment: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -57,14 +58,14 @@ router.put('/comment/:noteId/:commentId', fetchuser, [
 
     // Check for validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).send({ errors: errors.array() });
     }
 
     try {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
         if (!note) {
-            return res.status(404).json({ msg: 'Note not found' });
+            return res.status(404).send({ msg: 'Note not found' });
         }
 
         // Find the comment to be updated
@@ -72,10 +73,10 @@ router.put('/comment/:noteId/:commentId', fetchuser, [
 
         // Check if the comment exists and belongs to the user
         if (!comment) {
-            return res.status(404).json({ msg: 'Comment not found' });
+            return res.status(404).send({ msg: 'Comment not found' });
         }
         if (comment.userId.toString() !== req.user.id) {
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(401).send({ msg: 'User not authorized' });
         }
 
         // Update the comment
@@ -89,6 +90,7 @@ router.put('/comment/:noteId/:commentId', fetchuser, [
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Update comment", "Error updating user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -102,19 +104,19 @@ router.delete('/comment/:noteId/:commentId', fetchuser, async (req, res) => {
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
         if (!note) {
-            return res.status(404).json({ msg: 'Note not found' });
+            return res.status(404).send({ msg: 'Note not found' });
         }
 
         // Find the comment to be deleted
         let comment = await Comments.findById(req.params.commentId);
         if (!comment) {
-            return res.status(404).json({ msg: 'Comment not found' });
+            return res.status(404).send({ msg: 'Comment not found' });
         }
 
         // Check if the comment belongs to the user (or if the user has special permissions, if applicable)
         if (comment.userId.toString() !== req.user.id) {
             // You might also want to check for special permissions here
-            return res.status(401).json({ msg: 'User not authorized' });
+            return res.status(401).send({ msg: 'User not authorized' });
         }
 
         // Delete the comment
@@ -126,6 +128,7 @@ router.delete('/comment/:noteId/:commentId', fetchuser, async (req, res) => {
           })
     } catch (error) {
         console.log(error.message);
+        logActivity("Update comment", "Error updating the comment of a post: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -140,7 +143,7 @@ router.get('/comment/:noteId', async (req,res)=>{
         // Check if the note exists
         const note = await Notes.findById(req.params.noteId);
         if (!note) {
-            return res.status(404).json({ msg: 'Note not found' });
+            return res.status(404).send({ msg: 'Note not found' });
         }
 
         //find comment of the post
@@ -155,6 +158,7 @@ router.get('/comment/:noteId', async (req,res)=>{
     }
     catch (error) {
         console.log(error.message);
+        logActivity("Fetch comment", "Error fetching comment of a post: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message

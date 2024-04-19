@@ -12,21 +12,30 @@ const multer = require('multer');
 const path = require("path")
 const fs = require("fs")
 
-
-
-
-
 // for multiple image upload
 
 // Specify the destination folder
 const uploadDir = path.join(__dirname, '../images/post');
 
 // Create directory fo image 
-fs.promises.mkdir(uploadDir, { recursive: true })
-  .then(() => console.log('Upload directory created successfully'))
-  .catch(err => console.error('Error creating upload directory:', err));
-
-
+fs.promises.access(uploadDir, fs.constants.F_OK)
+  .then(() => {
+    console.log('images/post directory already exists');
+    // Additional logic can be added here if needed, for when the directory already exists
+  })
+  .catch(() => {
+    // Directory does not exist, create it
+    fs.promises.mkdir(uploadDir, { recursive: true })
+      .then(() => {
+        console.log('images/post directory created successfully');
+        // Additional logic for handling successful directory creation
+      })
+      .catch((err) => {
+        console.error('Error creating images/post directory:', err);
+        logActivity("Create post image directory", "Error creating post directory: " + err.message, "error", req.user ? req.user.id : null);
+      });
+  });
+  
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
 
@@ -68,21 +77,6 @@ router.get('/post', async (req, res) => {
     let comments = await Comments.find();
     let users = await Users.find();
 
-    // Map each note to include its comments
-    // let notesWithComments = notes.map(note => {
-    //   // Find comments for this note
-    //   let noteComments = comments.filter(comment => comment.noteId.toString() === note._id.toString());
-    //   let userDetails = users.filter(user => note.userId.toString() === user._id.toString())
-    //   console.log(userDetails)
-
-    //   // Add comments to the note object
-    //   return {
-    //     ...note.toObject(), // Convert Mongoose document to plain JavaScript object
-    //     comments: noteComments,
-    //     userDetails: userDetails
-    //   };
-    // });
-
     // Map each note to include its comments and user details
     let notesWithCommentsAndUserDetails = notes.map(note => {
       // Find comments for this note
@@ -118,6 +112,7 @@ router.get('/post', async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
+    logActivity("Fetch all post", "Error fetching all post: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -139,6 +134,7 @@ router.get('/post/:userId', fetchuser, async (req, res) => {
       data: note
     });
   } catch (error) {
+    logActivity("Fetch user post", "Error fetching post of a user: " + err.message, "error", req.user ? req.user.id : null);
     console.log(error.message);
     res.status(500).send({
       status: STATUS_CODES[500],
@@ -162,6 +158,7 @@ router.get('/mypost', fetchuser, async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
+    logActivity("Fetch auth user post", "Error fetching auth user post: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -182,14 +179,14 @@ router.post('/post', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).send({ errors: errors.array() });
   }
 
   // Access uploaded files
   const files = req.files;
 
   if (!files || files.length === 0) {
-    return res.status(400).json({ error: 'No files uploaded!' });
+    return res.status(400).send({ error: 'No files uploaded!' });
   }
 
   // Save image metadata to the database
@@ -251,7 +248,7 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("add post", "Error adding post: " + error.message, "error", req.user ? req.user.id : null);
+    logActivity("Create post", "Error creating post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -270,7 +267,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).send({ errors: errors.array() });
   }
 
   try {
@@ -282,7 +279,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
 
     if (!note) {
       logActivity("update post", "Post not found", "error", req.user ? req.user.id : null);
-      return res.status(404).json({ msg: 'Note not found' });
+      return res.status(404).send({ msg: 'Note not found' });
     }
 
     // Update the note fields
@@ -323,7 +320,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("update post", "Error updating post: " + error.message, "error", req.user ? req.user.id : null);
+    logActivity("Update post", "Error updating post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -342,13 +339,13 @@ router.delete('/post/:id', fetchuser, async (req, res) => {
     // Check if the note exists
     if (!note) {
       logActivity("delete post", "Post not found", "error", req.user ? req.user.id : null);
-      return res.status(404).json({ msg: 'Note not found' });
+      return res.status(404).send({ msg: 'Note not found' });
     }
 
     // Check if the user owns the note
     if (note.user.toString() !== req.user.id) {
       logActivity("delete post", "not authorized", "error", req.user ? req.user.id : null);
-      return res.status(401).json({ msg: 'Not authorized' });
+      return res.status(401).send({ msg: 'Not authorized' });
     }
 
     // Delete the post and its additionalDetails
@@ -366,7 +363,7 @@ router.delete('/post/:id', fetchuser, async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("delete post", "Error deleting post: " + error.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete post", "Error deleting post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -382,6 +379,7 @@ const deleteAdditionalDetails = async (noteId) => {
 
   } catch (error) {
     console.error("Error deleting Additional Details:", error);
+    logActivity("Delete additional details", "Error deleting additional details when delete the post: " + err.message, "error", req.user ? req.user.id : null);
     throw error;
   }
 };
@@ -398,14 +396,14 @@ router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
 
     // Check if the note exists
     if (!note) {
-      return res.status(404).json({ msg: 'Note not found' });
+      return res.status(404).send({ msg: 'Note not found' });
     }
     // Find the index of the image with the given ID
     const imageIndex = note.image.findIndex(image => image.id === imageId);
 
     // Check if the image exists
     if (imageIndex === -1) {
-      return res.status(404).json({ msg: 'Image not found' });
+      return res.status(404).send({ msg: 'Image not found' });
     }
 
     // Get the filename or filepath of the image
@@ -435,6 +433,7 @@ router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
 
   } catch (error) {
     console.log(error.message);
+    logActivity("Delete post image", "Error deleting post image: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message

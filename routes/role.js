@@ -15,7 +15,7 @@ router.post('/role', [
 
     // Check wheather the user with the email exist already
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).send({ errors: errors.array() });
     }
     try {
         const { title, description } = req.body;
@@ -33,6 +33,7 @@ router.post('/role', [
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Create role", "Error creating role: " + err.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -51,7 +52,7 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
 
     // Check whether there are any validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).send({ errors: errors.array() });
     }
 
     try {
@@ -63,7 +64,7 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
 
         // Check if the role exists
         if (!role) {
-            return res.status(404).json({ msg: 'Role not found' });
+            return res.status(404).send({ msg: 'Role not found' });
         }
 
         // Update role fields
@@ -84,6 +85,7 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Update role", "Error updating role: " + err.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -102,7 +104,7 @@ router.delete('/role/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
         // Check if the role exists
         if (!role) {
-            return res.status(404).json({ msg: 'Role not found' });
+            return res.status(404).send({ msg: 'Role not found' });
         }
 
         // Delete the role
@@ -115,6 +117,7 @@ router.delete('/role/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
     } catch (error) {
         cconsole.log(error.message);
+        logActivity("Delete role", "Error deleting role: " + err.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -136,6 +139,7 @@ router.get('/role', [fetchuser, checkAdminRole], async (req, res) => {
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Fetching role", "Error fetching role: " + err.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message

@@ -1,35 +1,70 @@
 var jwt = require('jsonwebtoken');
 var privateKey = process.env.PRIVATE_KEY;
 const Roles = require("../models/Roles")
+const STATUS_CODES = require("http");
 
-const fetchuser = (req,res,next)=>{
+const fetchuser = (req, res, next) => {
     // Get the user from jwt token and id to req object 
-    const token = req.header("auth-token")
-    if(!token){
-        res.status(401).send({error:"Please authenticate using valid token"})
+    const token = req.header("auth-token");
+    if (!token) {
+        res.status(401).send({
+            status: STATUS_CODES[401],
+            msg: "Please authenticate using valid token"
+        })
     }
     try {
-        const data = jwt.verify(token,privateKey);
+        const data = jwt.verify(token, privateKey);
         req.user = data.user;
         next();
     } catch (error) {
-        res.status(401).send({error:"Please authenticate using valid token"})
+        logActivity("Middleware fetchuser", "Error in the middleware for fetching user: " + err.message, "error", req.user ? req.user.id : null);
+        res.status(401).send({
+            status: STATUS_CODES[401],
+            msg: "Please authenticate using valid token",
+            error: error.message
+        })
     }
 
 }
 
 const checkAdminRole = async (req, res, next) => {
-    let roleTitle = await Roles.findById(req.user.roleId)
-    console.log(roleTitle)
-
-    if (req.user && roleTitle.title === 'Admin') {
-        next();
-    } else {
-        res.status(403).send({error: "Unauthorized access. Admin role required."});
+    if (!req.user || !req.user.roleId) {
+        return res.status(400).send({
+            status: STATUS_CODES[400],
+            msg: "Bad request: User data incomplete."
+        });
     }
-}
+
+    try {
+        const { roleId } = req.user;
+        const role = await Roles.findById(roleId);
+
+        if (!role) {
+            return res.status(404).send({
+                status: STATUS_CODES[404],
+                error: "Role not found."
+            });
+        }
+
+        if (role.title === 'Admin') {
+            next();
+        } else {
+            res.status(403).send({
+                status: STATUS_CODES[403],
+                error: "Unauthorized access. Admin role required."
+            });
+        }
+    } catch (error) {
+        logActivity("Admin role check", "Error on checking admin role: " + err.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            error: "Internal Server Error while fetching role.",
+            error: error.message
+        });
+    }
+};
 
 
-  
 
-module.exports = {fetchuser,checkAdminRole};
+
+module.exports = { fetchuser, checkAdminRole };

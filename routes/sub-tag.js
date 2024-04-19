@@ -15,7 +15,7 @@ router.post('/subtag',[fetchuser, checkAdminRole] , [
   
     // Check wheather the user with the email exist already
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).send({ errors: errors.array() });
     }
     try {
       const {title,description,tagId} = req.body;
@@ -33,6 +33,7 @@ router.post('/subtag',[fetchuser, checkAdminRole] , [
       
     } catch (error) {
       console.error(error.message);
+      logActivity("Create subtag", "Error creating subtag: " + err.message, "error", req.user ? req.user.id : null);
       res.status(500).send({
         status: STATUS_CODES[500],
         message: error.message
@@ -51,7 +52,7 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).send({ errors: errors.array() });
   }
 
   try {
@@ -66,12 +67,12 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
 
       // Check if the subtag exists
       if (!subtag) {
-          return res.status(404).json({ msg: 'Subtag not found' });
+          return res.status(404).send({ msg: 'Subtag not found' });
       }
 
       // Check if the user is authorized to update the subtag
       // if (subtag.user.toString() !== req.user.id) {
-      //     return res.status(401).json({ msg: 'User not authorized' });
+      //     return res.status(401).send({ msg: 'User not authorized' });
       // }
 
       // Update the subtag
@@ -89,6 +90,7 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     console.error(error.message);
+    logActivity("Update subtag", "Error updating subtag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -104,12 +106,12 @@ router.delete('/subtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
       // Check if the subtag exists
       if (!subtag) {
-          return res.status(404).json({ msg: 'Subtag not found' });
+          return res.status(404).send({ msg: 'Subtag not found' });
       }
 
       // Check if the user is authorized to delete the subtag
       // if (subtag.user.toString() !== req.user.id) {
-      //     return res.status(401).json({ msg: 'User not authorized' });
+      //     return res.status(401).send({ msg: 'User not authorized' });
       // }
 
       // Delete the subtag
@@ -122,6 +124,7 @@ router.delete('/subtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
+    logActivity("Delete subtag", "Error deleting subtag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -138,12 +141,12 @@ router.get('/subtag/:tagId',fetchuser, async (req, res) => {
 
       // Check if the subtag exists
       if (!subtags) {
-          return res.status(404).json({ msg: 'Subtag not found' });
+          return res.status(404).send({ msg: 'Subtag not found' });
       }
 
       // Check if the user is authorized to delete the subtag
       // if (subtag.user.toString() !== req.user.id) {
-      //     return res.status(401).json({ msg: 'User not authorized' });
+      //     return res.status(401).send({ msg: 'User not authorized' });
       // }
 
       res.status(200).send({
@@ -154,6 +157,7 @@ router.get('/subtag/:tagId',fetchuser, async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
+    logActivity("Fetching subtag", "Error detching subtag belongs to a tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message

@@ -17,7 +17,7 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
   // Check wheather the user with the email exist already
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).send({ errors: errors.array() });
   }
 
   try {
@@ -37,6 +37,7 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     cconsole.error(error.message);
+    logActivity("Create tag", "Error creating tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -83,6 +84,7 @@ router.get('/tag', [fetchuser, checkAdminRole], async (req, res) => {
     // res.send(tagsWithSubTags);
   } catch (error) {
     console.log(error.message);
+    logActivity("Fetch all tag", "Error fetching all tag and subtag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -100,7 +102,7 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    return res.status(400).send({ errors: errors.array() });
   }
 
   try {
@@ -118,12 +120,12 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
     // Check if the tag exists
     if (!tag) {
-      return res.status(404).json({ msg: 'Tag not found' });
+      return res.status(404).send({ msg: 'Tag not found' });
     }
 
     // Check if the user owns the tag
     // if (tag.user.toString() !== req.user.id) {
-    //   return res.status(401).json({ msg: 'Not authorized' });
+    //   return res.status(401).send({ msg: 'Not authorized' });
     // }
 
     tag = await Tags.findByIdAndUpdate(req.params.id, { $set: tagFields }, { new: true });
@@ -136,6 +138,7 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     console.error(error.message);
+    logActivity("Update tag", "Error updating tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -152,12 +155,12 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
     // Check if the tag exists
     if (!tag) {
-      return res.status(404).json({ msg: 'Tag not found' });
+      return res.status(404).send({ msg: 'Tag not found' });
     }
 
     // Check if the user owns the tag
     // if (tag.user.toString() !== req.user.id) {
-    //   return res.status(401).json({ msg: 'Not authorized' });
+    //   return res.status(401).send({ msg: 'Not authorized' });
     // }
 
     // Delete the tag and its subtags
@@ -173,6 +176,7 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
+    logActivity("Delete tag", "Error deleting tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -186,6 +190,7 @@ const deleteSubtags = async (tagId) => {
     // You can also delete subtags from a separate collection if they are stored that way
     await SubTags.deleteMany({ tagId: tagId });
   } catch (error) {
+    logActivity("Delete subtag", "Error deleting subtag when delete the tag: " + err.message, "error", req.user ? req.user.id : null);
     console.error("Error deleting subtags:", error);
     throw error;
   }

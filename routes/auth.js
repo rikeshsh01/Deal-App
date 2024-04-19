@@ -21,13 +21,13 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',
     port: 587,
     auth: {
-        user: 'mac.stracke0@ethereal.email',
-        pass: '4D8GegRYYq6X3s2HDU'
+        user: 'aglae.corkery60@ethereal.email',
+        pass: 'pR9NGsNEXVb7xVPwDU'
     }
 });
 
 // Function to send verification email
-const sendVerificationEmail = (email, verificationCode) => {
+const sendVerificationEmail = async (email, verificationCode) => {
     const mailOptions = {
         from: "noreply.deal@gmail.com",
         to: email,
@@ -35,14 +35,17 @@ const sendVerificationEmail = (email, verificationCode) => {
         text: `Your verification code is: ${verificationCode}`
     };
 
-    transporter.sendMail(mailOptions, (error, info) => {
-        if (error) {
-            console.error("Error sending email: ", error);
-        } else {
-            console.log("Email sent: ", info.response);
-        }
-    });
+    try {
+        let info = await transporter.sendMail(mailOptions);
+        console.log("Email sent: ", info.response);
+        return info.response;
+    } catch (error) {
+        logActivity("Send verification email", "Error sending verification email: " + error.message, "error", req.user ? req.user.id : null);
+        console.error("Error sending email: ", error);
+        throw error; // Rethrow the error to handle it in the calling function
+    }
 };
+
 
 
 // for multiple image upload
@@ -51,9 +54,23 @@ const sendVerificationEmail = (email, verificationCode) => {
 const uploadDir = path.join(__dirname, '../images/profile');
 
 // Create directory fo image 
-fs.promises.mkdir(uploadDir, { recursive: true })
-    .then(() => console.log('Upload directory created successfully'))
-    .catch(err => console.error('Error creating upload directory:', err));
+fs.promises.access(uploadDir, fs.constants.F_OK)
+    .then(() => {
+        console.log('images/profile directory already exists');
+        // Additional logic can be added here if needed, for when the directory already exists
+    })
+    .catch(() => {
+        // Directory does not exist, create it
+        fs.promises.mkdir(uploadDir, { recursive: true })
+            .then(() => {
+                console.log('images/profile directory created successfully');
+                // Additional logic for handling successful directory creation
+            })
+            .catch((err) => {
+                console.error('Error creating images/profile directory:', err);
+                logActivity("Create profile image directory", "Error creating profile directory: " + err.message, "error", req.user ? req.user.id : null);
+            });
+    });
 
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -90,7 +107,7 @@ router.post('/signup', upload.array('image', 1), [
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             logActivity("create user", "Failed validation for creating user", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ errors: errors.array() });
+            return res.status(400).send({ errors: errors.array() });
         }
 
         const { name, email, phoneNumber, password, roleId } = req.body;
@@ -99,7 +116,7 @@ router.post('/signup', upload.array('image', 1), [
         let user = await Users.findOne({ email });
         if (user) {
             logActivity("create user", "Attempt to create user with existing email", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ success: false, error: "A user with this email already exists" });
+            return res.status(400).send({ success: false, error: "A user with this email already exists" });
         }
 
         // Get the role ID if not provided
@@ -114,13 +131,13 @@ router.post('/signup', upload.array('image', 1), [
         const verificationCode = Math.floor(100000 + Math.random() * 900000);
 
         // Send verification email
-        sendVerificationEmail(email, verificationCode);
+        let emailRes = await sendVerificationEmail(email, verificationCode);
 
         let file = req.files;
-        console.log(file)
+        // console.log(file)
 
         if (!file || file.length === 0) {
-            return res.status(400).json({ error: 'No files uploaded!' });
+            return res.status(400).send({ error: 'No files uploaded!' });
         }
 
         const images = req.files.map(file => ({
@@ -129,8 +146,8 @@ router.post('/signup', upload.array('image', 1), [
             path: file.path,
             size: file.size,
             mimetype: file.mimetype,
-            url:`http://localhost:8080/images/profile/${file.filename}`
-          }));
+            url: `http://localhost:8080/images/profile/${file.filename}`
+        }));
 
         // Create new user
         user = await Users.create({
@@ -153,7 +170,7 @@ router.post('/signup', upload.array('image', 1), [
 
         logActivity("Email Verification", "Verification code created successfully", "success", req.user ? req.user.id : null);
 
-        res.status(200).json({
+        res.status(200).send({
             success: true,
             message: "Verification code sent successfully",
             data: user._id,
@@ -162,7 +179,7 @@ router.post('/signup', upload.array('image', 1), [
     } catch (error) {
         console.error(error.message);
         logActivity("create user", "Error creating user: " + error.message, "error", req.user ? req.user.id : null);
-        res.status(500).json({
+        res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message,
 
@@ -177,7 +194,7 @@ router.post('/verifyemail/:userId', async (req, res) => {
 
         // Validate inputs
         if (!userId || !verificationCode) {
-            return res.status(400).json({ success: false, error: "Missing userId or verificationCode" });
+            return res.status(400).send({ success: false, error: "Missing userId or verificationCode" });
         }
 
         // Find user and verification record in parallel
@@ -188,26 +205,27 @@ router.post('/verifyemail/:userId', async (req, res) => {
 
         // Check if user and verification record exist
         if (!user || !verifyEmail) {
-            return res.status(404).json({ success: false, error: "User or verification record not found" });
+            return res.status(404).send({ success: false, error: "User or verification record not found" });
         }
 
         // Check if verification code matches
         if (verifyEmail.code !== verificationCode) {
-            return res.status(400).json({ success: false, error: "Invalid verification code" });
+            return res.status(400).send({ success: false, error: "Invalid verification code" });
         }
         // Update user status to verified
         user.verified = true;
         const userData = await user.save();
 
         // Email verified successfully
-        res.status(200).json({
+        res.status(200).send({
             success: true,
             message: "Email verified successfully",
-            data: userData // Return user data if needed
+            data: userData
         });
     } catch (error) {
         console.error("Error verifying email:", error);
-        res.status(500).json({ success: false, error: "Internal server error" });
+        logActivity("Verify email", "Error verifying email: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({ success: false, error: "Internal server error" });
     }
 });
 
@@ -222,7 +240,7 @@ router.post('/login', [
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             logActivity("login", "Failed validation for authenticating the user", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ errors: errors.array() });
+            return res.status(400).send({ errors: errors.array() });
         }
 
         const { email, password } = req.body;
@@ -232,19 +250,19 @@ router.post('/login', [
 
         if (!user) {
             logActivity("login", "Attempt to login with wrong email", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ success: false, error: "User does not exist" });
+            return res.status(400).send({ success: false, error: "User does not exist" });
         }
 
         // Check if password matches
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) {
             logActivity("login", "Attempt to login with wrong password", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ success: false, error: "Password does not match" });
+            return res.status(400).send({ success: false, error: "Password does not match" });
         }
 
         if (user.verified === false) {
             logActivity("login", "User is not verified yet", "error", req.user ? req.user.id : null);
-            return res.status(400).json({ success: false, error: "User is not verified yet" });
+            return res.status(400).send({ success: false, error: "User is not verified yet" });
         }
 
         // Generate JWT token
@@ -258,7 +276,7 @@ router.post('/login', [
         const authToken = jwt.sign(payload, privateKey);
 
         logActivity("login", "Login successfull", "success", req.user ? req.user.id : null);
-        res.status(200).json({
+        res.status(200).send({
             success: true,
             message: "User authenticated successfully",
             authToken: authToken
@@ -267,7 +285,7 @@ router.post('/login', [
     } catch (error) {
         console.error(error.message);
         logActivity("login", "Error logging in: " + error.message, "error", req.user ? req.user.id : null);
-        res.status(500).json({
+        res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
         });
@@ -286,6 +304,7 @@ router.get('/user', [fetchuser, checkAdminRole], async (req, res) => {
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Fetching user", "Error fetching user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
@@ -307,6 +326,7 @@ router.get('/myuser', fetchuser, async (req, res) => {
 
     } catch (error) {
         console.log(error.message);
+        logActivity("Fetching auth user", "Error fetching logged in  user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             message: error.message
