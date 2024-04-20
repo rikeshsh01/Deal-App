@@ -76,6 +76,7 @@ router.get('/post', async (req, res) => {
     // Fetch all comments
     let comments = await Comments.find();
     let users = await Users.find();
+    let additionalDetals = await AdditionalDetails.find();
 
     // Map each note to include its comments and user details
     let notesWithCommentsAndUserDetails = notes.map(note => {
@@ -96,12 +97,14 @@ router.get('/post', async (req, res) => {
 
       // Find user details for this note's userId
       let noteUserDetails = users.find(user => user._id.toString() === note.userId.toString());
+      let additionalDetail = additionalDetals.filter(aDetails => aDetails.noteId.toString() === note._id.toString());
 
       // Add comments with user details and post user details to the note object
       return {
         ...note.toObject(), // Convert Mongoose document to plain JavaScript object
         userDetails: noteUserDetails,
-        comments: commentsWithUserDetails
+        comments: commentsWithUserDetails,
+        additionalDetail: additionalDetail
       };
     });
 
