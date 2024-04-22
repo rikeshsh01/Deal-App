@@ -36,8 +36,9 @@ router.get('/search', async (req, res) => {
       console.error(error.message);
       logActivity("Search", "Error in searching: " + err.message, "error", req.user ? req.user.id : null);
       res.status(500).send({
-            status: STATUS_CODES[500],
-            message: error.message
+        status: 500,
+        message: "Internal server error",
+        error: error.message
         });
     }
   });

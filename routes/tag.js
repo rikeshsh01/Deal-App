@@ -17,23 +17,25 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
   // Check wheather the user with the email exist already
   if (!errors.isEmpty()) {
-    return res.status(400).send({ status:400,
-                message: "Validation failed.",
-                error: errors.array()  });
+    return res.status(400).send({
+      status: 400,
+      message: "Validation failed.",
+      error: errors.array()
+    });
   }
 
   try {
     const { title, description } = req.body;
     const tag = new Tags({
-      title, description,created_at: new Date()
+      title, description, created_at: new Date()
     })
 
     const saveTag = await tag.save();
 
     res.status(200).send({
-      status:200,
-      msg:"Tag added successfully",
-      data:saveTag
+      status: 200,
+      message: "Tag added successfully",
+      data: saveTag
 
     })
 
@@ -41,8 +43,9 @@ router.post('/tag', [fetchuser, checkAdminRole], [
     cconsole.error(error.message);
     logActivity("Create tag", "Error creating tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
+      status: 500,
+      message: "Internal server error",
+      error: error.message
     });
   }
 
@@ -68,6 +71,14 @@ router.get('/tag', [fetchuser], async (req, res) => {
     // Fetch all tags
     let tags = await Tags.find();
 
+    if (!tags) {
+      return res.status(404).send({
+        status: 404,
+        message: 'Tag not found',
+        error: "Tag not found"
+      });
+    }
+
     // Create an array of tags with their respective sub-tags
     let tagsWithSubTags = tags.map(tag => {
       const tagIdString = tag._id.toString(); // Convert ObjectId to string for consistency
@@ -88,8 +99,9 @@ router.get('/tag', [fetchuser], async (req, res) => {
     console.log(error.message);
     logActivity("Fetch all tag", "Error fetching all tag and subtag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
+      status: 500,
+      message: "Internal server error",
+      error: error.message
     });
   }
 });
@@ -104,9 +116,11 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-    return res.status(400).send({ status:400,
-                message: "Validation failed.",
-                error: errors.array()  });
+    return res.status(400).send({
+      status: 400,
+      message: "Validation failed.",
+      error: errors.array()
+    });
   }
 
   try {
@@ -116,15 +130,19 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
     if (title) tagFields.title = title;
     if (description) tagFields.description = description;
     tagFields.updated_at = new Date();
-    
+
 
     let tag = await Tags.findById(req.params.id);
 
-  
+
 
     // Check if the tag exists
     if (!tag) {
-      return res.status(404).send({ msg: 'Tag not found' });
+      return res.status(404).send({
+        status: 404,
+        message: 'Tag not found',
+        error: "Tag not found"
+      });
     }
 
     // Check if the user owns the tag
@@ -144,8 +162,9 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
     console.error(error.message);
     logActivity("Update tag", "Error updating tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
+      status: 500,
+      message: "Internal server error",
+      error: error.message
     });
   }
 });
@@ -159,7 +178,11 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
     // Check if the tag exists
     if (!tag) {
-      return res.status(404).send({ msg: 'Tag not found' });
+      return res.status(404).send({
+        status: 404,
+        message: 'Tag not found',
+        error: "Tag not found"
+      });
     }
 
     // Check if the user owns the tag
@@ -182,8 +205,9 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
     console.error(error.message);
     logActivity("Delete tag", "Error deleting tag: " + err.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
+      status: 500,
+      message: "Internal server error",
+      error: error.message
     });
   }
 });

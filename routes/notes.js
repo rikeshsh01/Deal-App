@@ -11,7 +11,7 @@ const logActivity = require("./loginfo");
 const multer = require('multer');
 const path = require("path")
 const fs = require("fs")
-const os = require ("os");
+const os = require("os");
 const Tag = require("../models/Tags");
 const SubTag = require("../models/Sub-Tag");
 
@@ -39,7 +39,7 @@ fs.promises.access(uploadDir, fs.constants.F_OK)
         logActivity("Create post image directory", "Error creating post directory: " + err.message, "error", req.user ? req.user.id : null);
       });
   });
-  
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
 
@@ -52,7 +52,7 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
 
-    cb(null, Date.now() + '-' + file.originalname.length+ext); // Rename the file to prevent collisions
+    cb(null, Date.now() + '-' + file.originalname.length + ext); // Rename the file to prevent collisions
   }
 });
 
@@ -76,14 +76,14 @@ const upload = multer({
 function getIPv4Address() {
   const interfaces = os.networkInterfaces();
   for (let iface in interfaces) {
-      // Loop through each interface
-      for (let i = 0; i < interfaces[iface].length; i++) {
-          const address = interfaces[iface][i];
-          if (address.family === 'IPv4' && !address.internal) {
-              // Return the first external IPv4 address found
-              return address.address;
-          }
+    // Loop through each interface
+    for (let i = 0; i < interfaces[iface].length; i++) {
+      const address = interfaces[iface][i];
+      if (address.family === 'IPv4' && !address.internal) {
+        // Return the first external IPv4 address found
+        return address.address;
       }
+    }
   }
   return '127.0.0.1'; // Default to localhost if no external address found
 }
@@ -105,7 +105,7 @@ router.get('/post', async (req, res) => {
     let tagDetail = await Tag.find();
     let subtagDetail = await SubTag.find();
 
-    
+
     // Map each note to include its comments and user details
     let notesWithCommentsAndUserDetails = notes.map(note => {
       // Find comments for this note
@@ -135,8 +135,8 @@ router.get('/post', async (req, res) => {
         userDetails: noteUserDetails,
         comments: commentsWithUserDetails,
         additionalDetail: additionalDetail,
-        tagDetails:tagDetails,
-        subtagDetails:subtagDetails
+        tagDetails: tagDetails,
+        subtagDetails: subtagDetails
       };
     });
 
@@ -147,7 +147,7 @@ router.get('/post', async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("Fetch all post", "Error fetching all post: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Fetch all post", "Error fetching all post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -214,9 +214,11 @@ router.post('/post', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
-    return res.status(400).send({ status:400,
-                message: "Validation failed.",
-                error: errors.array()  });
+    return res.status(400).send({
+      status: 400,
+      message: "Validation failed.",
+      error: errors.array()
+    });
   }
 
   // Access uploaded files
@@ -235,8 +237,6 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     mimetype: file.mimetype,
     url: `http://${IPV4}:${process.env.PORT}/images/post/${file.filename}`
   }));
-
-  console.log(images)
 
 
 
@@ -305,13 +305,15 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
-    return res.status(400).send({ status:400,
-                message: "Validation failed.",
-                error: errors.array()  });
+    return res.status(400).send({
+      status: 400,
+      message: "Validation failed.",
+      error: errors.array()
+    });
   }
 
   try {
-    const { title, description, tagId,subtagId, latitude, longitude, location } = req.body;
+    const { title, description, tagId, subtagId, latitude, longitude, location } = req.body;
     const noteId = req.params.id;
 
     // Find the note by ID

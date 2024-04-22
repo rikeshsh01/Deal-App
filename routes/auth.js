@@ -253,11 +253,21 @@ router.post('/verifyemail/:userId', async (req, res) => {
         user.verified = true;
         const userData = await user.save();
 
+        // Generate JWT token
+        const payload = {
+            user: {
+                id: user.id,
+                roleId: user.roleId
+            }
+        };
+
+        const authToken = jwt.sign(payload, privateKey);
+
         // Email verified successfully
         res.status(200).send({
             status: 200,
             message: "Email verified successfully",
-            data: userData
+            data: { authToken:authToken, userId: userData._id }
         });
     } catch (error) {
         console.error("Error verifying email:", error);
@@ -314,19 +324,16 @@ router.post('/login', [
             });
         }
 
+        if (!user.verified) {
 
-        if (user.verified === false) {
-
-            let checkOtpOnDB = await Users.find({email:email})
-            console.log(checkOtpOnDB[0]._id.toString())
-            if(checkOtpOnDB){
-                await VerifyEmail.deleteMany({ userId: checkOtpOnDB[0]._id.toString() });
+            if(user){
+                await VerifyEmail.deleteMany({ userId: user._id});
             }
             // Generate verification code
             const verificationCode = Math.floor(100000 + Math.random() * 900000);
 
             // Send verification email
-            let emailRes = await sendVerificationEmail(email, verificationCode);
+            await sendVerificationEmail(email, verificationCode);
             // Store verification code with user ID in VerifyEmail collection
             await VerifyEmail.create({
                 code: verificationCode,
