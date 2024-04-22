@@ -13,7 +13,7 @@ router.post('/seedrole', async (req, res) => {
     try {
       const roleSeeder = await Roles.insertMany(roles);
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Roles seeded successfully",
             data: roleSeeder
         })
@@ -33,7 +33,7 @@ router.post('/seeduser', async (req, res) => {
 
     const userSeeder = await Users.insertMany(users);
       res.status(200).send({
-          status: STATUS_CODES[200],
+          status: 200,
           msg: "Users seeded successfully",
           data: userSeeder
       })
@@ -53,7 +53,7 @@ router.post('/seedtag', async (req, res) => {
   
       const userSeeder = await Tags.insertMany(tags);
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Users seeded successfully",
             data: userSeeder
         })
@@ -73,7 +73,7 @@ router.post('/seedtag', async (req, res) => {
   
       const userSeeder = await SubTags.insertMany(subtags);
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Users seeded successfully",
             data: userSeeder
         })

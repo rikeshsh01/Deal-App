@@ -15,7 +15,9 @@ router.post('/role', [
 
     // Check wheather the user with the email exist already
     if (!errors.isEmpty()) {
-        return res.status(400).send({ errors: errors.array() });
+        return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
     }
     try {
         const { title, description } = req.body;
@@ -26,7 +28,7 @@ router.post('/role', [
         const saveRole = await role.save();
 
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Role added successfully",
             data: saveRole
         })
@@ -52,7 +54,9 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
 
     // Check whether there are any validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).send({ errors: errors.array() });
+        return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
     }
 
     try {
@@ -76,7 +80,7 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
         role = await role.save();
 
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Role updated successfully",
             data: role
         })
@@ -111,7 +115,7 @@ router.delete('/role/:id', [fetchuser, checkAdminRole], async (req, res) => {
         await role.remove();
 
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Role Deleted successfully",
         });
 
@@ -132,7 +136,7 @@ router.get('/role', [fetchuser, checkAdminRole], async (req, res) => {
         // Find the role by ID
         let role = await Roles.find();
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Role fetched successfully",
             data:role
         });

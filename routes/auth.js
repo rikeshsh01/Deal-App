@@ -15,6 +15,7 @@ const router = express.Router();
 const { fetchuser, checkAdminRole } = require("../middleware/middleware");
 const { body, validationResult } = require('express-validator');
 const { STATUS_CODES } = require("http");
+const os = require("os")
 
 // Create a Nodemailer transporter
 const transporter = nodemailer.createTransport({
@@ -77,7 +78,8 @@ const storage = multer.diskStorage({
         cb(null, './images/profile'); // Specify the destination folder for uploaded images
     },
     filename: function (req, file, cb) {
-        cb(null, Date.now() + '-' + file.originalname); // Rename the file to prevent collisions
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, Date.now() + '-' + file.originalname.length + ext); // Rename the file to prevent collisions
     }
 });
 
@@ -97,6 +99,25 @@ const upload = multer({
 });
 
 
+//get local device IPV4 addres
+function getIPv4Address() {
+    const interfaces = os.networkInterfaces();
+    for (let iface in interfaces) {
+        // Loop through each interface
+        for (let i = 0; i < interfaces[iface].length; i++) {
+            const address = interfaces[iface][i];
+            if (address.family === 'IPv4' && !address.internal) {
+                // Return the first external IPv4 address found
+                return address.address;
+            }
+        }
+    }
+    return '127.0.0.1'; // Default to localhost if no external address found
+}
+
+var IPV4 = getIPv4Address();
+
+
 // Create a USER using POST "/api/auth/createuser". No login required
 router.post('/signup', upload.array('image', 1), [
     body('email').isEmail(),
@@ -107,7 +128,11 @@ router.post('/signup', upload.array('image', 1), [
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             logActivity("create user", "Failed validation for creating user", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ errors: errors.array() });
+            return res.status(400).send({
+                status: 400,
+                message: "Validation failed.",
+                error: errors.array()
+            });
         }
 
         const { name, email, phoneNumber, password, roleId } = req.body;
@@ -116,7 +141,11 @@ router.post('/signup', upload.array('image', 1), [
         let user = await Users.findOne({ email });
         if (user) {
             logActivity("create user", "Attempt to create user with existing email", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ success: false, error: "A user with this email already exists" });
+            return res.status(400).send({
+                status: 400,
+                message: "Please try with new email addresses.",
+                error: "A user with this email already exists"
+            });
         }
 
         // Get the role ID if not provided
@@ -127,27 +156,31 @@ router.post('/signup', upload.array('image', 1), [
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
-        // Generate verification code
-        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+        // // Generate verification code
+        // const verificationCode = Math.floor(100000 + Math.random() * 900000);
 
-        // Send verification email
-        let emailRes = await sendVerificationEmail(email, verificationCode);
+        // // Send verification email
+        // let emailRes = await sendVerificationEmail(email, verificationCode);
 
-        let file = req.files;
-        // console.log(file)
+        // let file = req.files;
+        // // console.log(file)
 
-        if (!file || file.length === 0) {
-            return res.status(400).send({ error: 'No files uploaded!' });
-        }
+        // if (!file || file.length === 0) {
+        //     return res.status(400).send({ 
+        //         status:400,
+        //         message:'Please upload atleast one the image.',
+        //         error: 'No files uploaded!' 
+        //     });
+        // }
 
-        const images = req.files.map(file => ({
-            originalname: file.originalname,
-            filename: file.filename,
-            path: file.path,
-            size: file.size,
-            mimetype: file.mimetype,
-            url: `http://localhost:8080/images/profile/${file.filename}`
-        }));
+        // const images = req.files.map(file => ({
+        //     originalname: "default.jpg",
+        //     filename:"default.jpg" ,
+        //     path: "/images/default.jpg",
+        //     size: 1000000,
+        //     mimetype: "image/png",
+        //     url: `http://192.168.1.70:8080/images/default.jpg`
+        // }));
 
         // Create new user
         user = await Users.create({
@@ -156,32 +189,23 @@ router.post('/signup', upload.array('image', 1), [
             password: hashedPassword,
             phoneNumber,
             roleId: roleId || defaultRoleId,
-            image: images,
+            image: [],
             verified: false,
             created_at: new Date()
         });
 
-        // Store verification code with user ID in VerifyEmail collection
-        await VerifyEmail.create({
-            code: verificationCode,
-            userId: user._id,
-            created_at: new Date()
-        });
-
-        logActivity("Email Verification", "Verification code created successfully", "success", req.user ? req.user.id : null);
 
         res.status(200).send({
-            success: true,
-            message: "Verification code sent successfully",
-            data: user._id,
-            verified: user.verified
+            status: 200,
+            message: "User created successfully, please login to verify the email",
         });
     } catch (error) {
         console.error(error.message);
         logActivity("create user", "Error creating user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
-            status: STATUS_CODES[500],
-            message: error.message,
+            status: 500,
+            message: "Internal server error",
+            error: error.message
 
         });
     }
@@ -194,7 +218,11 @@ router.post('/verifyemail/:userId', async (req, res) => {
 
         // Validate inputs
         if (!userId || !verificationCode) {
-            return res.status(400).send({ success: false, error: "Missing userId or verificationCode" });
+            return res.status(400).send({
+                status: 400,
+                message: "Please enter the verification code or userId",
+                error: "Missing userId or verificationCode",
+            });
         }
 
         // Find user and verification record in parallel
@@ -205,12 +233,21 @@ router.post('/verifyemail/:userId', async (req, res) => {
 
         // Check if user and verification record exist
         if (!user || !verifyEmail) {
-            return res.status(404).send({ success: false, error: "User or verification record not found" });
+            return res.status(404).send({
+                status: 404,
+                message: "Data not found in server",
+                error: "User or verification record not found"
+            });
         }
 
         // Check if verification code matches
+
         if (verifyEmail.code !== verificationCode) {
-            return res.status(400).send({ success: false, error: "Invalid verification code" });
+            return res.status(400).send({
+                status: 400,
+                message: "Verification code is not match, please try again",
+                error: "Invalid verification code"
+            });
         }
         // Update user status to verified
         user.verified = true;
@@ -218,14 +255,18 @@ router.post('/verifyemail/:userId', async (req, res) => {
 
         // Email verified successfully
         res.status(200).send({
-            success: true,
+            status: 200,
             message: "Email verified successfully",
             data: userData
         });
     } catch (error) {
         console.error("Error verifying email:", error);
         logActivity("Verify email", "Error verifying email: " + error.message, "error", req.user ? req.user.id : null);
-        res.status(500).send({ success: false, error: "Internal server error" });
+        res.status(500).send({
+            status: 500,
+            message: "Internal server error",
+            error: error.message
+        });
     }
 });
 
@@ -240,7 +281,11 @@ router.post('/login', [
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             logActivity("login", "Failed validation for authenticating the user", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ errors: errors.array() });
+            return res.status(400).send({
+                status: 400,
+                message: "Validation failed.",
+                error: errors.array()
+            });
         }
 
         const { email, password } = req.body;
@@ -250,19 +295,52 @@ router.post('/login', [
 
         if (!user) {
             logActivity("login", "Attempt to login with wrong email", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ success: false, error: "User does not exist" });
+            return res.status(400).send({
+                status: 400,
+                message: "Please login with valid user",
+                error: "User does not exist"
+            });
         }
 
         // Check if password matches
         const passwordMatch = await bcrypt.compare(password, user.password);
+
         if (!passwordMatch) {
             logActivity("login", "Attempt to login with wrong password", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ success: false, error: "Password does not match" });
+            return res.status(400).send({
+                status: 400,
+                message: "Please enter correct password",
+                error: "Password does not match"
+            });
         }
 
+
         if (user.verified === false) {
-            logActivity("login", "User is not verified yet", "error", req.user ? req.user.id : null);
-            return res.status(400).send({ success: false, error: "User is not verified yet" });
+
+            let checkOtpOnDB = await Users.find({email:email})
+            console.log(checkOtpOnDB[0]._id.toString())
+            if(checkOtpOnDB){
+                await VerifyEmail.deleteMany({ userId: checkOtpOnDB[0]._id.toString() });
+            }
+            // Generate verification code
+            const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+            // Send verification email
+            let emailRes = await sendVerificationEmail(email, verificationCode);
+            // Store verification code with user ID in VerifyEmail collection
+            await VerifyEmail.create({
+                code: verificationCode,
+                userId: user._id,
+                created_at: new Date()
+            });
+
+            logActivity("Email Verification", "Verification code created successfully", "success", req.user ? req.user.id : null);
+
+            return res.status(200).send({
+                status: 200,
+                message: "Verification code sent successfully",
+                data: { authToken:"", userId: user._id }
+            });
         }
 
         // Generate JWT token
@@ -277,17 +355,18 @@ router.post('/login', [
 
         logActivity("login", "Login successfull", "success", req.user ? req.user.id : null);
         res.status(200).send({
-            success: true,
+            status: 200,
             message: "User authenticated successfully",
-            authToken: authToken
+            data: { authToken, userId: user._id }
         });
         logActivity("Login", "User authenticated successfully", "success", req.user ? req.user.id : null)
     } catch (error) {
         console.error(error.message);
         logActivity("login", "Error logging in: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
-            status: STATUS_CODES[500],
-            message: error.message
+            status: 500,
+            message: "Internal server error",
+            error: error.messagee
         });
     }
 });
@@ -297,8 +376,8 @@ router.get('/user', [fetchuser, checkAdminRole], async (req, res) => {
     try {
         const user = await Users.find().select("-password");
         res.status(200).send({
-            status: STATUS_CODES[200],
-            msg: "Users data",
+            status: 200,
+            message: "Users data fetched successfully",
             data: user
         });
 
@@ -315,11 +394,11 @@ router.get('/user', [fetchuser, checkAdminRole], async (req, res) => {
 
 
 // Get my user data. login required
-router.get('/myuser', fetchuser, async (req, res) => {
+router.get('/myprofile', fetchuser, async (req, res) => {
     try {
         const user = await Users.findById(req.user.id).select("-password");
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             msg: "Users data",
             data: user
         });

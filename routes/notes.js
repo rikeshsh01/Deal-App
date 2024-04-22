@@ -11,6 +11,10 @@ const logActivity = require("./loginfo");
 const multer = require('multer');
 const path = require("path")
 const fs = require("fs")
+const os = require ("os");
+const Tag = require("../models/Tags");
+const SubTag = require("../models/Sub-Tag");
+
 
 // for multiple image upload
 
@@ -46,7 +50,9 @@ const storage = multer.diskStorage({
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname); // Rename the file to prevent collisions
+    const ext = path.extname(file.originalname).toLowerCase();
+
+    cb(null, Date.now() + '-' + file.originalname.length+ext); // Rename the file to prevent collisions
   }
 });
 
@@ -66,6 +72,25 @@ const upload = multer({
 });
 
 
+//get local device IPV4 addres
+function getIPv4Address() {
+  const interfaces = os.networkInterfaces();
+  for (let iface in interfaces) {
+      // Loop through each interface
+      for (let i = 0; i < interfaces[iface].length; i++) {
+          const address = interfaces[iface][i];
+          if (address.family === 'IPv4' && !address.internal) {
+              // Return the first external IPv4 address found
+              return address.address;
+          }
+      }
+  }
+  return '127.0.0.1'; // Default to localhost if no external address found
+}
+
+var IPV4 = getIPv4Address();
+
+
 
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
 router.get('/post', async (req, res) => {
@@ -77,7 +102,10 @@ router.get('/post', async (req, res) => {
     let comments = await Comments.find();
     let users = await Users.find();
     let additionalDetals = await AdditionalDetails.find();
+    let tagDetail = await Tag.find();
+    let subtagDetail = await SubTag.find();
 
+    
     // Map each note to include its comments and user details
     let notesWithCommentsAndUserDetails = notes.map(note => {
       // Find comments for this note
@@ -98,18 +126,22 @@ router.get('/post', async (req, res) => {
       // Find user details for this note's userId
       let noteUserDetails = users.find(user => user._id.toString() === note.userId.toString());
       let additionalDetail = additionalDetals.filter(aDetails => aDetails.noteId.toString() === note._id.toString());
+      let tagDetails = tagDetail.filter(tag => tag._id.toString() === note.tagId.toString());
+      let subtagDetails = subtagDetail.filter(subtag => subtag._id.toString() === note.subtagId.toString());
 
       // Add comments with user details and post user details to the note object
       return {
         ...note.toObject(), // Convert Mongoose document to plain JavaScript object
         userDetails: noteUserDetails,
         comments: commentsWithUserDetails,
-        additionalDetail: additionalDetail
+        additionalDetail: additionalDetail,
+        tagDetails:tagDetails,
+        subtagDetails:subtagDetails
       };
     });
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Notes fetched successfully',
       data: notesWithCommentsAndUserDetails
     });
@@ -132,7 +164,7 @@ router.get('/post/:userId', fetchuser, async (req, res) => {
     let note = await Notes.find({ userId: userId });
     // let note = await Notes.find();
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Posts of this user fetched successfully',
       data: note
     });
@@ -155,7 +187,7 @@ router.get('/mypost', fetchuser, async (req, res) => {
     let note = await Notes.find({ user: req.user.id });
     // let note = await Notes.find();
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Posts of this user fetched successfully',
       data: note
     });
@@ -182,7 +214,9 @@ router.post('/post', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
-    return res.status(400).send({ errors: errors.array() });
+    return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
   }
 
   // Access uploaded files
@@ -199,7 +233,7 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     path: file.path,
     size: file.size,
     mimetype: file.mimetype,
-    url: `http://localhost:8080/images/post/${file.filename}`
+    url: `http://${IPV4}:${process.env.PORT}/images/post/${file.filename}`
   }));
 
   console.log(images)
@@ -207,13 +241,14 @@ router.post('/post', fetchuser, upload.array('image', 12), [
 
 
   try {
-    const { title, description, tag, latitude, longitude, location, additionalDetails } = req.body;
+    const { title, description, tagId, subtagId, latitude, longitude, location, additionalDetails } = req.body;
     let note;
     note = new Notes({
       userId: req.user.id,
       title,
       description,
-      tag,
+      tagId,
+      subtagId,
       image: images,
       latitude,
       longitude,
@@ -243,7 +278,7 @@ router.post('/post', fetchuser, upload.array('image', 12), [
 
     logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Posts added successfully',
       data: saveNote,
       additionalDetailsData: savedAdditionalDetails
@@ -270,11 +305,13 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
     logActivity("update post", "Failed validation for updating post", "error", req.user ? req.user.id : null);
-    return res.status(400).send({ errors: errors.array() });
+    return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
   }
 
   try {
-    const { title, description, tag, latitude, longitude, location } = req.body;
+    const { title, description, tagId,subtagId, latitude, longitude, location } = req.body;
     const noteId = req.params.id;
 
     // Find the note by ID
@@ -288,7 +325,8 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     // Update the note fields
     note.title = title;
     note.description = description;
-    note.tag = tag;
+    note.tagId = tagId;
+    note.subtagId = subtagId;
     note.latitude = latitude;
     note.longitude = longitude;
     note.location = location;
@@ -317,7 +355,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
 
     logActivity("update post", "Post updated successfully", "success", req.user ? req.user.id : null);
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Post updated successfully',
       data: note,
     });
@@ -361,7 +399,7 @@ router.delete('/post/:id', fetchuser, async (req, res) => {
 
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: 'Posts deleted successfully',
     });
   } catch (error) {
@@ -430,7 +468,7 @@ router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
     });
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       msg: "Image Deleted successfully",
     });
 

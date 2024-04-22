@@ -27,7 +27,7 @@ router.get('/search', async (req, res) => {
       // Perform the search query
       const notes = await Notes.find(searchQuery);
       res.status(200).send({
-        status:STATUS_CODES[200],
+        status:200,
         msg:"Search results fetched successfully",
         data:notes
       })

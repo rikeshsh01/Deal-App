@@ -22,7 +22,7 @@ router.put('/aditionaldetail/:id', fetchuser, async (req, res) => {
 
         logActivity("Update additional detail", "Additional detail updated successfully", "success", req.user ? req.user.id : null);
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             message: 'Additional detail updated successfully',
             data: updatedDetail
         });
@@ -52,7 +52,7 @@ router.delete('/aditionaldetail/:id', fetchuser, async (req, res) => {
         }
 
         res.status(200).send({
-            status: STATUS_CODES[200],
+            status: 200,
             message: 'Additional detail deleted successfully',
             data: deletedDetail
         });

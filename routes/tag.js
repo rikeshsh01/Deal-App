@@ -17,7 +17,9 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
   // Check wheather the user with the email exist already
   if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
+    return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
   }
 
   try {
@@ -29,7 +31,7 @@ router.post('/tag', [fetchuser, checkAdminRole], [
     const saveTag = await tag.save();
 
     res.status(200).send({
-      status:STATUS_CODES[200],
+      status:200,
       msg:"Tag added successfully",
       data:saveTag
 
@@ -48,7 +50,7 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
 
 // Get all tags using: get "/api/notes/fetchallnotes". Login toBeRequired. 
-router.get('/tag', [fetchuser, checkAdminRole], async (req, res) => {
+router.get('/tag', [fetchuser], async (req, res) => {
   try {
     // Fetch all sub-tags and populate the "tagId" field with the "_id" field of the Tags collection
     let subTags = await SubTags.find().populate("_id");
@@ -76,9 +78,9 @@ router.get('/tag', [fetchuser, checkAdminRole], async (req, res) => {
     });
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: "Fetched successfully",
-      data: tagsWithSubTags
+      data: tags
     });
 
     // res.send(tagsWithSubTags);
@@ -102,7 +104,9 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-    return res.status(400).send({ errors: errors.array() });
+    return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
   }
 
   try {
@@ -131,7 +135,7 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
     tag = await Tags.findByIdAndUpdate(req.params.id, { $set: tagFields }, { new: true });
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: "Tag updated successfully",
       data: tag
     });
@@ -170,7 +174,7 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
     ]);
 
     res.status(200).send({
-      status: STATUS_CODES[200],
+      status: 200,
       message: "Tag removed"
     });
 

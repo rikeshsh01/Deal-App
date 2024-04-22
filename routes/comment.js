@@ -14,7 +14,9 @@ router.post('/comment/:noteId', fetchuser, [
 
     // Check for validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).send({ errors: errors.array() });
+        return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
     }
 
     try {
@@ -36,7 +38,7 @@ router.post('/comment/:noteId', fetchuser, [
         const saveComment = await comment.save();
 
         res.status(200).send({
-            status:STATUS_CODES[200],
+            status:200,
             msg:"Comment saved successfully",
             data:saveComment
           });
@@ -58,7 +60,9 @@ router.put('/comment/:noteId/:commentId', fetchuser, [
 
     // Check for validation errors
     if (!errors.isEmpty()) {
-        return res.status(400).send({ errors: errors.array() });
+        return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
     }
 
     try {
@@ -83,7 +87,7 @@ router.put('/comment/:noteId/:commentId', fetchuser, [
         const updatedComment = await Comments.findByIdAndUpdate(req.params.commentId, { $set: { content: req.body.content, updated_at: new Date()  } }, { new: true });
 
         res.status(200).send({
-            status:STATUS_CODES[200],
+            status:200,
             msg:"Comment updated successfully",
             data:updatedComment
           });
@@ -123,7 +127,7 @@ router.delete('/comment/:noteId/:commentId', fetchuser, async (req, res) => {
         await comment.remove();
 
         res.status(200).send({
-            status:STATUS_CODES[200],
+            status:200,
             msg:"Comment deleted successfully",
           })
     } catch (error) {
@@ -150,7 +154,7 @@ router.get('/comment/:noteId', async (req,res)=>{
         let comments = await Comments.find({noteId: req.params.noteId});
 
         res.status(200).send({
-            status:STATUS_CODES[200],
+            status:200,
             msg:"Fetched the comment of the post",
             data:comments
         })

@@ -15,7 +15,10 @@ const NotesSchema = new Schema({
         type: String,
         required: true
     },
-    tag: {
+    tagId: {
+        type: String,
+    },
+    subtagId: {
         type: String,
     },
     image: [ImageSchema],

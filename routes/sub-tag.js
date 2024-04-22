@@ -15,7 +15,9 @@ router.post('/subtag',[fetchuser, checkAdminRole] , [
   
     // Check wheather the user with the email exist already
     if (!errors.isEmpty()) {
-        return res.status(400).send({ errors: errors.array() });
+        return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
     }
     try {
       const {title,description,tagId} = req.body;
@@ -26,7 +28,7 @@ router.post('/subtag',[fetchuser, checkAdminRole] , [
       const saveSubTag = await subtag.save();
 
       res.status(200).send({
-        status:STATUS_CODES[200],
+        status:200,
         msg:"Subtag added successfully",
         data:saveSubTag
       })
@@ -52,7 +54,9 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
 
   // Check whether there are any validation errors
   if (!errors.isEmpty()) {
-      return res.status(400).send({ errors: errors.array() });
+      return res.status(400).send({ status:400,
+                message: "Validation failed.",
+                error: errors.array()  });
   }
 
   try {
@@ -83,7 +87,7 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
       );
 
       res.status(200).send({
-        status:STATUS_CODES[200],
+        status:200,
         msg:"Subtag updated successfully",
         data:subtag
       })
@@ -118,7 +122,7 @@ router.delete('/subtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
       await SubTags.findByIdAndRemove(req.params.id);
 
       res.status(200).send({
-        status:STATUS_CODES[200],
+        status:200,
         msg:"Subtag deleted successfully"
       })
 
@@ -150,7 +154,7 @@ router.get('/subtag/:tagId',fetchuser, async (req, res) => {
       // }
 
       res.status(200).send({
-        status:STATUS_CODES[200],
+        status:200,
         msg:"Subtag fetched successfully",
         data:subtags
       })
