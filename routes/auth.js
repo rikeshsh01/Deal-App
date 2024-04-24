@@ -162,25 +162,7 @@ router.post('/signup', upload.array('image', 1), [
         // // Send verification email
         // let emailRes = await sendVerificationEmail(email, verificationCode);
 
-        // let file = req.files;
-        // // console.log(file)
-
-        // if (!file || file.length === 0) {
-        //     return res.status(400).send({ 
-        //         status:400,
-        //         message:'Please upload atleast one the image.',
-        //         error: 'No files uploaded!' 
-        //     });
-        // }
-
-        // const images = req.files.map(file => ({
-        //     originalname: "default.jpg",
-        //     filename:"default.jpg" ,
-        //     path: "/images/default.jpg",
-        //     size: 1000000,
-        //     mimetype: "image/png",
-        //     url: `http://192.168.1.70:8080/images/default.jpg`
-        // }));
+        
 
         // Create new user
         user = await Users.create({
@@ -420,4 +402,87 @@ router.get('/myprofile', fetchuser, async (req, res) => {
 
     }
 });
+
+// Update a USER using PUT "/api/auth/updateuser/:id"
+router.put('/user/:id',fetchuser ,upload.array('image', 1), [
+    body('email').isEmail(),
+    body('name').isLength({ min: 3 }),
+    body('password').isLength({ min: 5 })
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            logActivity("update user", "Failed validation for updating user", "error", req.user ? req.user.id : null);
+            return res.status(400).send({
+                status: 400,
+                message: "Validation failed.",
+                error: errors.array()
+            });
+        }
+
+        const { id } = req.params;
+        const { name, email, phoneNumber, password, roleId } = req.body;
+
+        // Check if the user with the provided ID exists
+        let user = await Users.findById(id);
+        if (!user) {
+            logActivity("update user", "Attempt to update non-existing user", "error", req.user ? req.user.id : null);
+            return res.status(404).send({
+                status: 404,
+                message: "User not found.",
+                error: "User with the provided ID does not exist"
+            });
+        }
+
+        // Update user fields if provided
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (phoneNumber) user.phoneNumber = phoneNumber;
+        if (password) {
+            // Hash the new password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+            user.password = hashedPassword;
+        }
+        if (roleId) user.roleId = roleId;
+
+        let file = req.files;
+        // console.log(file)
+
+        if(file){
+            const images = req.files.map(file => ({
+                originalname: file.originalname,
+                filename: file.filename,
+                path: file.path,
+                size: file.size,
+                mimetype: file.mimetype,
+                url: `http://${IPV4}:${process.env.PORT}/images/post/${file.filename}`
+              }));
+
+              user.image = images;
+
+        }
+        // Save the updated user
+        await user.save();
+
+        res.status(200).send({
+            status: 200,
+            message: "User updated successfully",
+            data: user // Optionally, you can send back the updated user object
+        });
+    } catch (error) {
+        console.error(error.message);
+        logActivity("update user", "Error updating user: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
+            status: 500,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+});
+
+
+
+
+
 module.exports = router;

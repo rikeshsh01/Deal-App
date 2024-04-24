@@ -1,6 +1,7 @@
 var jwt = require('jsonwebtoken');
 var privateKey = process.env.PRIVATE_KEY;
 const Roles = require("../models/Roles")
+const logActivity = require("../routes/loginfo");
 const STATUS_CODES = require("http");
 
 const fetchuser = (req, res, next) => {
