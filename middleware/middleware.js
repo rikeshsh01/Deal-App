@@ -18,7 +18,7 @@ const fetchuser = (req, res, next) => {
         req.user = data.user;
         next();
     } catch (error) {
-        logActivity("Middleware fetchuser", "Error in the middleware for fetching user: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Middleware fetchuser", "Error in the middleware for fetching user: " + error.message, "error", req.user ? req.user.id : null);
         res.status(401).send({
             status: STATUS_CODES[401],
             msg: "Please authenticate using valid token",
