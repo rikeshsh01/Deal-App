@@ -72,26 +72,6 @@ const upload = multer({
 });
 
 
-//get local device IPV4 addres
-function getIPv4Address() {
-  const interfaces = os.networkInterfaces();
-  for (let iface in interfaces) {
-    // Loop through each interface
-    for (let i = 0; i < interfaces[iface].length; i++) {
-      const address = interfaces[iface][i];
-      if (address.family === 'IPv4' && !address.internal) {
-        // Return the first external IPv4 address found
-        return address.address;
-      }
-    }
-  }
-  return '127.0.0.1'; // Default to localhost if no external address found
-}
-
-var IPV4 = getIPv4Address();
-
-
-
 // Get all notes using: get "/api/notes/fetchallnotes". Login toBeRequired. 
 router.get('/post', async (req, res) => {
   try {
@@ -228,6 +208,8 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     return res.status(400).send({ error: 'No files uploaded!' });
   }
 
+  console.log(req.hostname)
+
   // Save image metadata to the database
   const images = req.files.map(file => ({
     originalname: file.originalname,
@@ -235,7 +217,7 @@ router.post('/post', fetchuser, upload.array('image', 12), [
     path: file.path,
     size: file.size,
     mimetype: file.mimetype,
-    url: `http://${IPV4}:${process.env.PORT}/images/post/${file.filename}`
+    url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
   }));
 
 

@@ -22,8 +22,8 @@ const transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',
     port: 587,
     auth: {
-        user: 'aglae.corkery60@ethereal.email',
-        pass: 'pR9NGsNEXVb7xVPwDU'
+        user: 'ottis40@ethereal.email',
+        pass: '4Am12aMpFuyZpWf968'
     }
 });
 
@@ -46,6 +46,35 @@ const sendVerificationEmail = async (email, verificationCode) => {
         throw error; // Rethrow the error to handle it in the calling function
     }
 };
+
+const isUserVerified = async (user) => {
+    if (!user) {
+        return false;
+    }
+
+    if (!user.verified) {
+        // Delete any existing verification codes for this user
+        await VerifyEmail.deleteMany({ userId: user._id });
+
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+        // Send verification email
+        await sendVerificationEmail(user.email, verificationCode);
+
+        // Store verification code with user ID in VerifyEmail collection
+        await VerifyEmail.create({
+            code: verificationCode,
+            userId: user._id,
+            created_at: new Date()
+        });
+
+        logActivity("Email Verification", "Verification code created successfully", "success", user._id);
+        return false; // User is not yet verified
+    }
+
+    return true; // User is verified
+}
 
 
 
@@ -97,25 +126,6 @@ const upload = multer({
     limits: { fileSize: 1024 * 1024 * 5 }, // Limit file size to 5MB
     fileFilter: fileFilter
 });
-
-
-//get local device IPV4 addres
-function getIPv4Address() {
-    const interfaces = os.networkInterfaces();
-    for (let iface in interfaces) {
-        // Loop through each interface
-        for (let i = 0; i < interfaces[iface].length; i++) {
-            const address = interfaces[iface][i];
-            if (address.family === 'IPv4' && !address.internal) {
-                // Return the first external IPv4 address found
-                return address.address;
-            }
-        }
-    }
-    return '127.0.0.1'; // Default to localhost if no external address found
-}
-
-var IPV4 = getIPv4Address();
 
 
 // Create a USER using POST "/api/auth/createuser". No login required
@@ -306,31 +316,17 @@ router.post('/login', [
             });
         }
 
-        if (!user.verified) {
+        // Check if user is verified
+        const isVerified = await isUserVerified(user);
 
-            if(user){
-                await VerifyEmail.deleteMany({ userId: user._id});
-            }
-            // Generate verification code
-            const verificationCode = Math.floor(100000 + Math.random() * 900000);
-
-            // Send verification email
-            await sendVerificationEmail(email, verificationCode);
-            // Store verification code with user ID in VerifyEmail collection
-            await VerifyEmail.create({
-                code: verificationCode,
-                userId: user._id,
-                created_at: new Date()
-            });
-
-            logActivity("Email Verification", "Verification code created successfully", "success", req.user ? req.user.id : null);
-
+        if (!isVerified) {
             return res.status(200).send({
                 status: 200,
-                message: "Verification code sent successfully",
-                data: { authToken:"", userId: user._id }
+                message: "Please verify your user first, Verification code sent to your email",
+                data: { authToken: "", userId: user._id }
             });
         }
+
 
         // Generate JWT token
         const payload = {
@@ -349,6 +345,7 @@ router.post('/login', [
             data: { authToken, userId: user._id }
         });
         logActivity("Login", "User authenticated successfully", "success", req.user ? req.user.id : null)
+
     } catch (error) {
         console.error(error.message);
         logActivity("login", "Error logging in: " + error.message, "error", req.user ? req.user.id : null);
@@ -456,7 +453,7 @@ router.put('/user/:id',fetchuser ,upload.array('image', 1), [
                 path: file.path,
                 size: file.size,
                 mimetype: file.mimetype,
-                url: `http://${IPV4}:${process.env.PORT}/images/post/${file.filename}`
+                url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
               }));
 
               user.image = images;
@@ -481,8 +478,106 @@ router.put('/user/:id',fetchuser ,upload.array('image', 1), [
     }
 });
 
+router.post('/forgetpassword', async (req, res) => {
+    try {
+        const { emailAddress } = req.body;
 
 
+        let userDetails = await Users.findOne({ email:emailAddress });
 
+
+        // Validate inputs
+        if (!userDetails) {
+            return res.status(400).send({
+                status: 400,
+                message: "Please enter valid email",
+                error: "Email not found on database",
+            });
+        }
+
+        if(userDetails){
+            await VerifyEmail.deleteMany({ userId: userDetails._id});
+        }
+        console.log(userDetails)
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000);
+
+        // Send verification email
+        await sendVerificationEmail(emailAddress, verificationCode);
+        // Store verification code with user ID in VerifyEmail collection
+        await VerifyEmail.create({
+            code: verificationCode,
+            userId: userDetails._id,
+            created_at: new Date()
+        });
+
+        logActivity("Password reset", "Verification code created successfully", "success", req.user ? req.user.id : null);
+
+        return res.status(200).send({
+            status: 200,
+            message: "Verification code sent successfully for reset password",
+            data: { authToken:"", userId: userDetails._id }
+        });
+
+    } catch (error) {
+        console.error("Error verifying email:", error);
+        logActivity("Verify email", "Error verifying email: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
+            status: 500,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+});
+
+
+router.post('/resetpassword/:userId', async (req, res) => {
+    try {
+        const userId = req.params.userId;
+        const { newpassword, confirmpassword} = req.body;
+
+        if(newpassword !== confirmpassword){
+            return res.status(400).send({
+                status: 400,
+                message: "Password not matched, Please enter correct conform password",
+                error: "confirm password is not matched with new passwod",
+            });
+        }
+
+
+        let user = await Users.findById(userId)
+
+        // Check if user and verification record exist
+        if (!user) {
+            return res.status(404).send({
+                status: 404,
+                message: "user not found in server",
+                error: "User record not found"
+            });
+        }
+        if (newpassword) {
+            // Hash the new password
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(newpassword, salt);
+            user.password = hashedPassword;
+        }
+
+        await user.save();
+
+        res.status(200).send({
+            status: 200,
+            message: "Password has been changed successfully, please login with new password",
+            data: { authToken:"", userId: user._id }
+        });
+    } catch (error) {
+        console.error("Error resetting password:", error);
+        logActivity("Reset pasword", "Error resetting password: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
+            status: 500,
+            message: "Internal server error",
+            error: error.message
+        });
+    }
+});
 
 module.exports = router;
