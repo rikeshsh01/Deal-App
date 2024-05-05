@@ -7,6 +7,10 @@ const NotesSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "user"
     },
+    buyerId :[{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "bookingprocess"
+    }],
     title: {
         type: String,
         required: true
