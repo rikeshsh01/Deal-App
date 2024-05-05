@@ -186,95 +186,102 @@ router.get('/mypost', fetchuser, async (req, res) => {
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 
 router.post('/post', fetchuser, upload.array('image', 12), [
-  body('title', "Enter Valid Title").isLength({ min: 3 }),
-  body('description', "Description should not be less than 5 characters").isLength({ min: 5 })
+    body('title', "Enter Valid Title").isLength({ min: 3 }),
+    body('description', "Description should not be less than 5 characters").isLength({ min: 5 }),
 ], async (req, res) => {
-  const errors = validationResult(req);
+    const errors = validationResult(req);
 
-  // Check whether there are any validation errors
-  if (!errors.isEmpty()) {
-    logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
-    return res.status(400).send({
-      status: 400,
-      message: "Validation failed.",
-      error: errors.array()
-    });
-  }
-
-  // Access uploaded files
-  const files = req.files;
-
-  if (!files || files.length === 0) {
-    return res.status(400).send({ error: 'No files uploaded!' });
-  }
-
-  console.log(req.hostname)
-
-  // Save image metadata to the database
-  const images = req.files.map(file => ({
-    originalname: file.originalname,
-    filename: file.filename,
-    path: file.path,
-    size: file.size,
-    mimetype: file.mimetype,
-    url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
-  }));
-
-
-
-  try {
-    const { title, description, tagId, subtagId, latitude, longitude, location, additionalDetails } = req.body;
-    let note;
-    note = new Notes({
-      userId: req.user.id,
-      title,
-      description,
-      tagId,
-      subtagId,
-      image: images,
-      latitude,
-      longitude,
-      location,
-      created_at: new Date(),
-    });
-
-    const saveNote = await note.save();
-    let savedAdditionalDetails = [];
-
-    // If additionalDetails is provided, add them to the database
-    if (additionalDetails && additionalDetails.length > 0) {
-
-      const detailsPromises = additionalDetails.map(async (detail) => {
-        const { key, value } = detail;
-        const additionalDetail = new AdditionalDetails({
-          noteId: saveNote._id,
-          key,
-          value,
-          created_at: new Date(),
+    // Check whether there are any validation errors
+    if (!errors.isEmpty()) {
+        logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
+        return res.status(400).send({
+            status: 400,
+            message: "Validation failed.",
+            error: errors.array()
         });
-        const savedDetail = await additionalDetail.save();
-        savedAdditionalDetails.push(savedDetail);
-      });
-      await Promise.all(detailsPromises);
     }
 
-    logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
-    res.status(200).send({
-      status: 200,
-      message: 'Posts added successfully',
-      data: saveNote,
-      additionalDetailsData: savedAdditionalDetails
+    // Access uploaded files
+    const files = req.files;
 
-    });
-  } catch (error) {
-    console.log(error.message);
-    logActivity("Create post", "Error creating post: " + error.message, "error", req.user ? req.user.id : null);
-    res.status(500).send({
-      status: STATUS_CODES[500],
-      message: error.message
-    });
-  }
+    if (!files || files.length === 0) {
+        return res.status(400).send({ error: 'No files uploaded!' });
+    }
+
+    console.log(req.hostname);
+
+    // Save image metadata to the database
+    const images = req.files.map(file => ({
+        originalname: file.originalname,
+        filename: file.filename,
+        path: file.path,
+        size: file.size,
+        mimetype: file.mimetype,
+        url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
+    }));
+
+    try {
+        const { title, description, tagId, subtagId, latitude, longitude, location, additionalDetails } = req.body;
+
+        // Create GeoJSON Point for geoLocation field
+        const geoLocation = {
+            type: "Point",
+            coordinates: [parseFloat(longitude), parseFloat(latitude)]
+        };
+
+        let note;
+        note = new Notes({
+            userId: req.user.id,
+            title,
+            description,
+            tagId,
+            subtagId,
+            image: images,
+            latitude,
+            longitude,
+            location,
+            geoLocation, // Assign the GeoJSON Point object
+            created_at: new Date(),
+        });
+
+        const saveNote = await note.save();
+        let savedAdditionalDetails = [];
+
+        // If additionalDetails is provided, add them to the database
+        if (additionalDetails && additionalDetails.length > 0) {
+
+            const detailsPromises = additionalDetails.map(async (detail) => {
+                const { key, value } = detail;
+                const additionalDetail = new AdditionalDetails({
+                    noteId: saveNote._id,
+                    key,
+                    value,
+                    created_at: new Date(),
+                });
+                const savedDetail = await additionalDetail.save();
+                savedAdditionalDetails.push(savedDetail);
+            });
+            await Promise.all(detailsPromises);
+        }
+
+        logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
+        res.status(200).send({
+            status: 200,
+            message: 'Posts added successfully',
+            data: saveNote,
+            additionalDetailsData: savedAdditionalDetails
+
+        });
+    } catch (error) {
+        console.log(error.message);
+        logActivity("Create post", "Error creating post: " + error.message, "error", req.user ? req.user.id : null);
+        res.status(500).send({
+            status: STATUS_CODES[500],
+            message: error.message
+        });
+    }
 });
+
 
 
 // Update notes using: put "/api/notes/updatenotes/:id". Login to be required.

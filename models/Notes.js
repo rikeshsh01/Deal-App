@@ -34,6 +34,17 @@ const NotesSchema = new Schema({
         type: String, // Location name or description
         required: true
     },
+    geoLocation: {
+        type: {
+            type: String,
+            enum: ["Point"],
+            required: true
+        },
+        coordinates: {
+            type: [Number],
+            required: true
+        }
+    },
     likedUser: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "like"
@@ -56,6 +67,7 @@ const NotesSchema = new Schema({
         default: null
     }
 });
+NotesSchema.index({ geoLocation: "2dsphere" });
 
 const Note = mongoose.model("post", NotesSchema);
 module.exports = Note;
