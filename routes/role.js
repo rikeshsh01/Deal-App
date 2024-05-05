@@ -37,7 +37,7 @@ router.post('/role', [
 
     } catch (error) {
         console.log(error.message);
-        logActivity("Create role", "Error creating role: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Create role", "Error creating role: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: 500,
             message: "Internal server error",
@@ -94,7 +94,7 @@ router.put('/role/:id', [fetchuser, checkAdminRole], [
 
     } catch (error) {
         console.log(error.message);
-        logActivity("Update role", "Error updating role: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Update role", "Error updating role: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: 500,
             message: "Internal server error",
@@ -127,7 +127,7 @@ router.delete('/role/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
     } catch (error) {
         cconsole.log(error.message);
-        logActivity("Delete role", "Error deleting role: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Delete role", "Error deleting role: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: 500,
             message: "Internal server error",
@@ -150,7 +150,7 @@ router.get('/role', [fetchuser, checkAdminRole], async (req, res) => {
 
     } catch (error) {
         console.log(error.message);
-        logActivity("Fetching role", "Error fetching role: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Fetching role", "Error fetching role: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: 500,
             message: "Internal server error",

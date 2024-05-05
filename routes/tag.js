@@ -41,7 +41,7 @@ router.post('/tag', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     cconsole.error(error.message);
-    logActivity("Create tag", "Error creating tag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Create tag", "Error creating tag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -97,7 +97,7 @@ router.get('/tag', [fetchuser], async (req, res) => {
     // res.send(tagsWithSubTags);
   } catch (error) {
     console.log(error.message);
-    logActivity("Fetch all tag", "Error fetching all tag and subtag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Fetch all tag", "Error fetching all tag and subtag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -160,7 +160,7 @@ router.put('/tag/:id', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     console.error(error.message);
-    logActivity("Update tag", "Error updating tag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Update tag", "Error updating tag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -203,7 +203,7 @@ router.delete('/tag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
-    logActivity("Delete tag", "Error deleting tag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete tag", "Error deleting tag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -218,7 +218,7 @@ const deleteSubtags = async (tagId) => {
     // You can also delete subtags from a separate collection if they are stored that way
     await SubTags.deleteMany({ tagId: tagId });
   } catch (error) {
-    logActivity("Delete subtag", "Error deleting subtag when delete the tag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete subtag", "Error deleting subtag when delete the tag: " + error.message, "error", req.user ? req.user.id : null);
     console.error("Error deleting subtags:", error);
     throw error;
   }

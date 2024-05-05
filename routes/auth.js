@@ -98,7 +98,7 @@ fs.promises.access(uploadDir, fs.constants.F_OK)
             })
             .catch((err) => {
                 console.error('Error creating images/profile directory:', err);
-                logActivity("Create profile image directory", "Error creating profile directory: " + err.message, "error", req.user ? req.user.id : null);
+                logActivity("Create profile image directory", "Error creating profile directory: " + error.message, "error", req.user ? req.user.id : null);
             });
     });
 

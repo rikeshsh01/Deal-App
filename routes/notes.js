@@ -36,7 +36,7 @@ fs.promises.access(uploadDir, fs.constants.F_OK)
       })
       .catch((err) => {
         console.error('Error creating images/post directory:', err);
-        logActivity("Create post image directory", "Error creating post directory: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Create post image directory", "Error creating post directory: " + error.message, "error", req.user ? req.user.id : null);
       });
   });
 
@@ -149,7 +149,7 @@ router.get('/post/:userId', fetchuser, async (req, res) => {
       data: note
     });
   } catch (error) {
-    logActivity("Fetch user post", "Error fetching post of a user: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Fetch user post", "Error fetching post of a user: " + error.message, "error", req.user ? req.user.id : null);
     console.log(error.message);
     res.status(500).send({
       status: STATUS_CODES[500],
@@ -173,7 +173,7 @@ router.get('/mypost', fetchuser, async (req, res) => {
     });
   } catch (error) {
     console.log(error.message);
-    logActivity("Fetch auth user post", "Error fetching auth user post: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Fetch auth user post", "Error fetching auth user post: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message
@@ -411,7 +411,7 @@ const deleteAdditionalDetails = async (noteId) => {
 
   } catch (error) {
     console.error("Error deleting Additional Details:", error);
-    logActivity("Delete additional details", "Error deleting additional details when delete the post: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete additional details", "Error deleting additional details when delete the post: " + error.message, "error", req.user ? req.user.id : null);
     throw error;
   }
 };
@@ -465,7 +465,7 @@ router.delete('/postimage/:imageId/:noteId', fetchuser, async (req, res) => {
 
   } catch (error) {
     console.log(error.message);
-    logActivity("Delete post image", "Error deleting post image: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete post image", "Error deleting post image: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: STATUS_CODES[500],
       message: error.message

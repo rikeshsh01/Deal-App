@@ -56,7 +56,7 @@ const checkAdminRole = async (req, res, next) => {
             });
         }
     } catch (error) {
-        logActivity("Admin role check", "Error on checking admin role: " + err.message, "error", req.user ? req.user.id : null);
+        logActivity("Admin role check", "Error on checking admin role: " + error.message, "error", req.user ? req.user.id : null);
         res.status(500).send({
             status: STATUS_CODES[500],
             error: "Internal Server Error while fetching role.",

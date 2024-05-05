@@ -104,7 +104,7 @@ router.put('/subtag/:id', [fetchuser, checkAdminRole], [
 
   } catch (error) {
     console.error(error.message);
-    logActivity("Update subtag", "Error updating subtag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Update subtag", "Error updating subtag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -143,7 +143,7 @@ router.delete('/subtag/:id', [fetchuser, checkAdminRole], async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
-    logActivity("Delete subtag", "Error deleting subtag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Delete subtag", "Error deleting subtag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
@@ -181,7 +181,7 @@ router.get('/subtag/:tagId', fetchuser, async (req, res) => {
 
   } catch (error) {
     console.error(error.message);
-    logActivity("Fetching subtag", "Error detching subtag belongs to a tag: " + err.message, "error", req.user ? req.user.id : null);
+    logActivity("Fetching subtag", "Error detching subtag belongs to a tag: " + error.message, "error", req.user ? req.user.id : null);
     res.status(500).send({
       status: 500,
       message: "Internal server error",
