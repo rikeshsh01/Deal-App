@@ -22,6 +22,21 @@ unliked:
 for rejection
 out of stock after confirmed (if there is multople request) 
 
+myopinion
+
+
+
+report buyer or seller
+after sending request by buyer
+1. not approved
+2. cancel request
+
+after approval
+1. product quality is not good
+2. fake product
+3. wrong location
+4. Wrong information from seller
+
 */
 
 
