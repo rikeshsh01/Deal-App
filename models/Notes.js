@@ -58,6 +58,11 @@ const NotesSchema = new Schema({
         required: true,
         default: 0
     },
+    stockCount: {
+        type: Number,
+        required: true,
+        default: 1
+    },
     created_at: {
         type: Date,
         default: null

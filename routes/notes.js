@@ -186,100 +186,101 @@ router.get('/mypost', fetchuser, async (req, res) => {
 
 // Create notesusing: post "/api/notes/addnotes". Login toBeRequired. 
 router.post('/post', fetchuser, upload.array('image', 12), [
-    body('title', "Enter Valid Title").isLength({ min: 3 }),
-    body('description', "Description should not be less than 5 characters").isLength({ min: 5 }),
+  body('title', "Enter Valid Title").isLength({ min: 3 }),
+  body('description', "Description should not be less than 5 characters").isLength({ min: 5 }),
 ], async (req, res) => {
-    const errors = validationResult(req);
+  const errors = validationResult(req);
 
-    // Check whether there are any validation errors
-    if (!errors.isEmpty()) {
-        logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
-        return res.status(400).send({
-            status: 400,
-            message: "Validation failed.",
-            error: errors.array()
+  // Check whether there are any validation errors
+  if (!errors.isEmpty()) {
+    logActivity("add post", "Failed validation for adding post", "error", req.user ? req.user.id : null);
+    return res.status(400).send({
+      status: 400,
+      message: "Validation failed.",
+      error: errors.array()
+    });
+  }
+
+  // Access uploaded files
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).send({ error: 'No files uploaded!' });
+  }
+
+  console.log(req.hostname);
+
+  // Save image metadata to the database
+  const images = req.files.map(file => ({
+    originalname: file.originalname,
+    filename: file.filename,
+    path: file.path,
+    size: file.size,
+    mimetype: file.mimetype,
+    url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
+  }));
+
+  try {
+    const { title, description, tagId, subtagId, latitude, longitude, location, additionalDetails, stockCount } = req.body;
+
+    // Create GeoJSON Point for geoLocation field
+    const geoLocation = {
+      type: "Point",
+      coordinates: [parseFloat(longitude), parseFloat(latitude)]
+    };
+
+    let note;
+    note = new Notes({
+      userId: req.user.id,
+      title,
+      description,
+      tagId,
+      subtagId,
+      image: images,
+      latitude,
+      longitude,
+      location,
+      stockCount,
+      geoLocation, // Assign the GeoJSON Point object
+      created_at: new Date(),
+    });
+
+    const saveNote = await note.save();
+    let savedAdditionalDetails = [];
+
+    // If additionalDetails is provided, add them to the database
+    if (additionalDetails && additionalDetails.length > 0) {
+
+      const detailsPromises = additionalDetails.map(async (detail) => {
+        const { key, value } = detail;
+        const additionalDetail = new AdditionalDetails({
+          noteId: saveNote._id,
+          key,
+          value,
+          created_at: new Date(),
         });
+        const savedDetail = await additionalDetail.save();
+        savedAdditionalDetails.push(savedDetail);
+      });
+      await Promise.all(detailsPromises);
     }
 
-    // Access uploaded files
-    const files = req.files;
+    logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
+    res.status(200).send({
+      status: 200,
+      message: 'Posts added successfully',
+      data: saveNote,
+      additionalDetailsData: savedAdditionalDetails
 
-    if (!files || files.length === 0) {
-        return res.status(400).send({ error: 'No files uploaded!' });
-    }
-
-    console.log(req.hostname);
-
-    // Save image metadata to the database
-    const images = req.files.map(file => ({
-        originalname: file.originalname,
-        filename: file.filename,
-        path: file.path,
-        size: file.size,
-        mimetype: file.mimetype,
-        url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
-    }));
-
-    try {
-        const { title, description, tagId, subtagId, latitude, longitude, location, additionalDetails } = req.body;
-
-        // Create GeoJSON Point for geoLocation field
-        const geoLocation = {
-            type: "Point",
-            coordinates: [parseFloat(longitude), parseFloat(latitude)]
-        };
-
-        let note;
-        note = new Notes({
-            userId: req.user.id,
-            title,
-            description,
-            tagId,
-            subtagId,
-            image: images,
-            latitude,
-            longitude,
-            location,
-            geoLocation, // Assign the GeoJSON Point object
-            created_at: new Date(),
-        });
-
-        const saveNote = await note.save();
-        let savedAdditionalDetails = [];
-
-        // If additionalDetails is provided, add them to the database
-        if (additionalDetails && additionalDetails.length > 0) {
-
-            const detailsPromises = additionalDetails.map(async (detail) => {
-                const { key, value } = detail;
-                const additionalDetail = new AdditionalDetails({
-                    noteId: saveNote._id,
-                    key,
-                    value,
-                    created_at: new Date(),
-                });
-                const savedDetail = await additionalDetail.save();
-                savedAdditionalDetails.push(savedDetail);
-            });
-            await Promise.all(detailsPromises);
-        }
-
-        logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
-        res.status(200).send({
-            status: 200,
-            message: 'Posts added successfully',
-            data: saveNote,
-            additionalDetailsData: savedAdditionalDetails
-
-        });
-    } catch (error) {
-        console.log(error.message);
-        logActivity("Create post", "Error creating post: " + error.message, "error", req.user ? req.user.id : null);
-        res.status(500).send({
-            status: STATUS_CODES[500],
-            message: error.message
-        });
-    }
+    });
+  } catch (error) {
+    console.log(error.message);
+    logActivity("Create post", "Error creating post: " + error.message, "error", req.user ? req.user.id : null);
+    res.status(500).send({
+      status: STATUS_CODES[500],
+      message: error.message
+    });
+  }
 });
 
 
@@ -302,8 +303,13 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
   }
 
   try {
-    const { title, description, tagId, subtagId, latitude, longitude, location } = req.body;
+    const { title, description, tagId, subtagId, latitude, longitude, location, stockCount } = req.body;
     const noteId = req.params.id;
+
+    const geoLocation = {
+      type: "Point",
+      coordinates: [parseFloat(longitude), parseFloat(latitude)]
+    };
 
     // Find the note by ID
     let note = await Notes.findById(noteId);
@@ -311,6 +317,14 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     if (!note) {
       logActivity("update post", "Post not found", "error", req.user ? req.user.id : null);
       return res.status(404).send({ msg: 'Note not found' });
+    }
+
+    // Check if the user owns the note
+    if (note.userId.toString() !== req.user.id) {
+      return res.status(403).send({
+        status: 403,
+        message: "You are not authorized to update this note"
+      });
     }
 
     // Update the note fields
@@ -321,6 +335,9 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
     note.latitude = latitude;
     note.longitude = longitude;
     note.location = location;
+    note.stockCount = stockCount;
+    note.geoLocation = geoLocation; // Assign the GeoJSON Point object
+
 
     // console.log(note.image)
     // Access uploaded files
@@ -334,7 +351,7 @@ router.put('/post/:id', fetchuser, upload.array('image', 12), [
         path: file.path,
         size: file.size,
         mimetype: file.mimetype,
-        url: `http://localhost:8080/images/post/${file.filename}`
+        url: `http://${req.hostname}:${process.env.PORT}/images/post/${file.filename}`
       }));
 
       note.image = [...note.image, ...images]; // Append new images to existing images
