@@ -218,7 +218,7 @@ router.get('/singlepost/:postid', fetchuser, async (req, res) => {
     res.status(200).send({
       status: 200,
       message: 'Single post data fetched successfully',
-      data: notesWithCommentsAndUserDetails
+      data: notesWithCommentsAndUserDetails[0]
     });
   } catch (error) {
     logActivity("Fetch user post", "Error fetching post of a user: " + error.message, "error", req.user ? req.user.id : null);
