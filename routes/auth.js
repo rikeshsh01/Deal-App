@@ -132,7 +132,8 @@ const upload = multer({
 router.post('/signup', upload.array('image', 1), [
     body('email').isEmail(),
     body('name').isLength({ min: 3 }),
-    body('password').isLength({ min: 5 })
+    body('password').isLength({ min: 5 }),
+    body('phonenumber').isLength({ min: 10,max:10 }).withMessage('Phone number must be 10 digits')
 ], async (req, res) => {
     try {
         const errors = validationResult(req);

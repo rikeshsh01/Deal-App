@@ -164,7 +164,7 @@ router.get('/singlepost/:postid', fetchuser, async (req, res) => {
     const postId = req.params.postid;
 
     // Fetch single post
-    const singlePost = await Notes.findById(postId).lean();
+    const singlePost = [await Notes.findById(postId)];
 
     if (!singlePost) {
       return res.status(404).send({
@@ -173,39 +173,52 @@ router.get('/singlepost/:postid', fetchuser, async (req, res) => {
         error: "Post not found"
       });
     }
+    let comments = await Comments.find();
+    let users = await Users.find();
+    let additionalDetals = await AdditionalDetails.find();
+    let tagDetail = await Tag.find();
+    let subtagDetail = await SubTag.find();
 
-    // Fetch related data in parallel
-    const [comments, users, additionalDetails, tags, subtags] = await Promise.all([
-      Comments.find({ noteId: postId }).lean(),
-      Users.find().lean(),
-      AdditionalDetails.find({ noteId: postId }).lean(),
-      Tag.find().lean(),
-      SubTag.find().lean()
-    ]);
 
-    // Map comments with user details
-    const commentsWithUserDetails = comments.map(comment => {
-      const commentUserDetails = users.find(user => user._id.toString() === comment.userId.toString());
+    // Map each note to include its comments and user details
+    let notesWithCommentsAndUserDetails = singlePost.map(note => {
+      // Find comments for this note
+      let noteComments = comments.filter(comment => comment.noteId.toString() === note._id.toString());
+
+      // Map each comment to include user details
+      let commentsWithUserDetails = noteComments.map(comment => {
+        // Find user details for this comment's userId
+        let commentUserDetails = users.find(user => user._id.toString() === comment.userId.toString());
+
+        // Return comment object with user details
+        return {
+          ...comment.toObject(), // Convert Mongoose document to plain JavaScript object
+          userDetails: commentUserDetails
+        };
+      });
+
+      // Find user details for this note's userId
+      let noteUserDetails = users.find(user => user._id.toString() === note.userId.toString());
+      let additionalDetail = additionalDetals.filter(aDetails => aDetails.noteId.toString() === note._id.toString());
+      let tagDetails = tagDetail.filter(tag => tag._id.toString() === note.tagId.toString());
+      let subtagDetails = subtagDetail.filter(subtag => subtag._id.toString() === note.subtagId.toString());
+
+      // Add comments with user details and post user details to the note object
       return {
-        ...comment,
-        userDetails: commentUserDetails
+        ...note.toObject(), // Convert Mongoose document to plain JavaScript object
+        userDetails: noteUserDetails,
+        comments: commentsWithUserDetails,
+        additionalDetail: additionalDetail,
+        tagDetails: tagDetails,
+        subtagDetails: subtagDetails
       };
     });
 
-    // Find post user details
-    const postUserDetails = users.find(user => user._id.toString() === singlePost.userId.toString());
-
-    // Attach additional details, tag details, and subtag details to the post
-    singlePost.userDetails = postUserDetails;
-    singlePost.comments = commentsWithUserDetails;
-    singlePost.additionalDetails = additionalDetails;
-    singlePost.tagDetails = tags.find(tag => tag._id.toString() === singlePost.tagId.toString());
-    singlePost.subtagDetails = subtags.find(subtag => subtag._id.toString() === singlePost.subtagId.toString());
 
     res.status(200).send({
       status: 200,
       message: 'Single post data fetched successfully',
-      data: singlePost
+      data: notesWithCommentsAndUserDetails
     });
   } catch (error) {
     logActivity("Fetch user post", "Error fetching post of a user: " + error.message, "error", req.user ? req.user.id : null);
