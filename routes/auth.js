@@ -145,7 +145,7 @@ router.post('/signup', upload.array('image', 1), [
             });
         }
 
-        const { name, email, phoneNumber, password, roleId } = req.body;
+        const { name, email, phonenumber, password, roleId } = req.body;
 
         // Check if the user with the email already exists
         let user = await Users.findOne({ email });
@@ -179,7 +179,7 @@ router.post('/signup', upload.array('image', 1), [
             name,
             email,
             password: hashedPassword,
-            phoneNumber,
+            phoneNumber:phonenumber,
             roleId: roleId || defaultRoleId,
             image: [],
             verified: false,
