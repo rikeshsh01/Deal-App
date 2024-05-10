@@ -16,7 +16,7 @@ const roles = [{
 const users = [{
     name:"Admin", 
     email: "admin@admin.com",
-    phonenumber: "9860090504",
+    phoneNumber: "9860090504",
     password: bcrypt.hashSync("admin",10),
     roleId:"661eab24f84c85bbcb5dadaf",
     verified:true,
@@ -25,7 +25,7 @@ const users = [{
 {
     name:"User1", 
     email: "user1@user.com",
-    phonenumber: "9860682046",
+    phoneNumber: "9860682046",
     password: bcrypt.hashSync("users",10),
     roleId:"661eab24f84c85bbcb5dadb0",
     verified:true,
@@ -34,7 +34,7 @@ const users = [{
 {
     name:"User2", 
     email: "user2@user.com",
-    phonenumber: "9860682046",
+    phoneNumber: "9860682046",
     password: bcrypt.hashSync("users",10),
     roleId:"661eab24f84c85bbcb5dadb0",
     verified:true,
