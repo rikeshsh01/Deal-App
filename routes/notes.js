@@ -159,6 +159,65 @@ router.get('/post/:userId', fetchuser, async (req, res) => {
 
 });
 
+router.get('/singlepost/:postid', fetchuser, async (req, res) => {
+  try {
+    const postId = req.params.postid;
+
+    // Fetch single post
+    const singlePost = await Notes.findById(postId).lean();
+
+    if (!singlePost) {
+      return res.status(404).send({
+        status: 404,
+        message: 'Post not found',
+        error: "Post not found"
+      });
+    }
+
+    // Fetch related data in parallel
+    const [comments, users, additionalDetails, tags, subtags] = await Promise.all([
+      Comments.find({ noteId: postId }).lean(),
+      Users.find().lean(),
+      AdditionalDetails.find({ noteId: postId }).lean(),
+      Tag.find().lean(),
+      SubTag.find().lean()
+    ]);
+
+    // Map comments with user details
+    const commentsWithUserDetails = comments.map(comment => {
+      const commentUserDetails = users.find(user => user._id.toString() === comment.userId.toString());
+      return {
+        ...comment,
+        userDetails: commentUserDetails
+      };
+    });
+
+    // Find post user details
+    const postUserDetails = users.find(user => user._id.toString() === singlePost.userId.toString());
+
+    // Attach additional details, tag details, and subtag details to the post
+    singlePost.userDetails = postUserDetails;
+    singlePost.comments = commentsWithUserDetails;
+    singlePost.additionalDetails = additionalDetails;
+    singlePost.tagDetails = tags.find(tag => tag._id.toString() === singlePost.tagId.toString());
+    singlePost.subtagDetails = subtags.find(subtag => subtag._id.toString() === singlePost.subtagId.toString());
+
+    res.status(200).send({
+      status: 200,
+      message: 'Single post data fetched successfully',
+      data: singlePost
+    });
+  } catch (error) {
+    logActivity("Fetch user post", "Error fetching post of a user: " + error.message, "error", req.user ? req.user.id : null);
+    console.log(error.message);
+    res.status(500).send({
+      status: 500,
+      message: 'Internal server error'
+    });
+  }
+});
+
+
 
 
 // Get auth users notes using: get "/api/notes/getnotes". Login toBeRequired. 
@@ -207,8 +266,6 @@ router.post('/post', fetchuser, upload.array('image', 12), [
   if (!files || files.length === 0) {
     return res.status(400).send({ error: 'No files uploaded!' });
   }
-
-  console.log(req.hostname);
 
   // Save image metadata to the database
   const images = req.files.map(file => ({
