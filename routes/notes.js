@@ -325,12 +325,16 @@ router.post('/post', fetchuser, upload.array('image', 12), [
       await Promise.all(detailsPromises);
     }
 
+    saveNote.additionalDetailsData = savedAdditionalDetails;
+
     logActivity("add post", "Post added successfully", "success", req.user ? req.user.id : null);
     res.status(200).send({
       status: 200,
       message: 'Posts added successfully',
-      data: saveNote,
-      additionalDetailsData: savedAdditionalDetails
+      data: {
+        ...saveNote.toObject(), // Convert Mongoose document to plain JavaScript object
+        additionalDetail: savedAdditionalDetails
+      }
 
     });
   } catch (error) {
