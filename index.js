@@ -24,7 +24,8 @@ app.use("/api",require("./routes/comment"));
 app.use("/api",require("./routes/aditionaldetail"));
 app.use("/api",require("./routes/like"));
 app.use("/api",require("./routes/favourite"));
-app.use("/api",require("./routes/bookingprocess"));
+// app.use("/api",require("./routes/bookingprocess"));
+app.use("/api",require("./routes/order"));
 
 
 // endpoints for seeding 
