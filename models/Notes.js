@@ -63,6 +63,11 @@ const NotesSchema = new Schema({
         required: true,
         default: 1
     },
+    status: {
+        type: String,
+        enum: ["active", "inactive"],
+        default: "active"
+    },
     created_at: {
         type: Date,
         default: null

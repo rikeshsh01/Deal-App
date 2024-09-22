@@ -38,7 +38,32 @@ router.post('/request', [fetchuser], async (req, res, next) => {
         return res.status(400).json({ msg: 'Cannot request your own note' });
       }
   
-      // Add the user (buyer) to buyerId array if they are not already in it
+      // Check for existing orders by the user
+      const existingOrder = await Orders.findOne({
+        noteId: note._id,
+        buyerId: req.user.id,
+        status: "approved" // Ensure the existing order is approved
+      });
+  
+      // If the user already has an approved order, create a new order
+      if (existingOrder) {
+        // Create an entry in the Orders collection with the requested count
+        const newOrder = new Orders({
+          noteId: note._id,
+          buyerId: req.user.id,
+          sellerId: note.userId,
+          requestCount: requestCount // The requested count is used here
+        });
+        await newOrder.save();
+  
+        return res.status(200).json({
+          status: 200,
+          message: "New request made successfully",
+          data: newOrder
+        });
+      }
+  
+      // If the buyer is not in the buyerId array or has no approved order, add them
       if (!note.buyerId.includes(req.user.id)) {
         note.buyerId.push(req.user.id);
         await note.save();
@@ -52,15 +77,15 @@ router.post('/request', [fetchuser], async (req, res, next) => {
         });
         await newOrder.save();
   
-        res.status(200).json({
+        return res.status(200).json({
           status: 200,
           message: "Request made successfully",
           data: newOrder
         });
       } else {
-        res.status(400).json({
+        return res.status(400).json({
           status: 400,
-          msg: 'You have already requested this note'
+          msg: 'You already have a pending request for this note'
         });
       }
   
@@ -110,65 +135,84 @@ router.get('/orders', [fetchuser], async (req, res, next) => {
  // Route to approve an order and set other buyers to "pending"
 router.put('/approve', [fetchuser], async (req, res, next) => {
     try {
-      const { orderId } = req.body;
-  
-      // Find the order to approve and populate the noteId
-      const orderToApprove = await Orders.findOne({
-        _id: orderId,
-        sellerId: req.user.id // Ensure the logged-in user is the seller
-      }).populate('noteId'); // Populate noteId
-  
-      // Check if the order exists
-      if (!orderToApprove) {
-        return res.status(404).json({ msg: 'Order not found or unauthorized action' });
-      }
-  
-      // Get the note associated with the order
-      const note = orderToApprove.noteId;
-  
-      // Check if there's enough stock for the order request
-      if (note.stockCount < orderToApprove.requestCount) {
-        return res.status(400).json({
-          status: 400,
-          message: 'Not enough stock to approve the request'
+        const { orderId } = req.body;
+
+        // Find the order to approve and populate the noteId
+        const orderToApprove = await Orders.findOne({
+            _id: orderId,
+            sellerId: req.user.id // Ensure the logged-in user is the seller
+        }).populate('noteId'); // Populate noteId
+
+        // Check if the order exists
+        if (!orderToApprove) {
+            return res.status(404).json({ msg: 'Order not found or unauthorized action' });
+        }
+
+        // Get the note associated with the order
+        const note = orderToApprove.noteId;
+
+        // Check if there's enough stock for the order request
+        if (note.stockCount < orderToApprove.requestCount) {
+            return res.status(400).json({
+                status: 400,
+                message: 'Not enough stock to approve the request'
+            });
+        }
+
+        // Update the selected order's status to "approved" only if it's not already approved
+        if (orderToApprove.status !== "approved") {
+            orderToApprove.status = "approved";
+            await orderToApprove.save();
+        }
+
+        // Decrease the stockCount of the note based on the requestCount
+        note.stockCount -= orderToApprove.requestCount;
+        await note.save();
+
+        // Set all other orders for the same note to "pending" if they are not already approved
+        const remainingOrders = await Orders.updateMany(
+            {
+                _id: { $ne: orderId }, // Exclude the approved order
+                noteId: note._id, // Use noteId from the approved order
+                sellerId: req.user.id,  // Ensure it's the seller's note
+                status: { $ne: "approved" } // Only update orders that are not approved
+            },
+            { status: "pending" }
+        );
+
+        // If stockCount is equal to requestCount, reject remaining orders and set note status to inactive
+        if (note.stockCount === 0) {
+            await Orders.updateMany(
+                {
+                    noteId: note._id,
+                    sellerId: req.user.id,
+                    status: "pending" // Only reject pending orders
+                },
+                { status: "rejected" }
+            );
+
+            note.status = "inactive"; // Change note status to inactive
+            await note.save();
+        }
+
+        res.status(200).json({
+            status: 200,
+            message: "Order approved successfully",
+            approvedOrder: orderToApprove,
+            updatedStockCount: note.stockCount,
+            remainingOrdersUpdated: remainingOrders
         });
-      }
-  
-      // Update the selected order's status to "approved"
-      orderToApprove.status = "approved";
-      await orderToApprove.save();
-  
-      // Decrease the stockCount of the note based on the requestCount
-      note.stockCount -= orderToApprove.requestCount;
-      await note.save();
-  
-      // Set all other orders for the same note to "pending"
-      await Orders.updateMany(
-        {
-          _id: { $ne: orderId }, // Exclude the approved order
-          noteId: note._id, // Use noteId from the approved order
-          sellerId: req.user.id  // Ensure it's the seller's note
-        },
-        { status: "pending" }
-      );
-  
-      res.status(200).json({
-        status: 200,
-        message: "Order approved successfully",
-        approvedOrder: orderToApprove,
-        updatedStockCount: note.stockCount
-      });
-  
+
     } catch (err) {
-      console.error(err.message);
-      logActivity("Error", err.message, "error", req.user ? req.user.id : null);
-      res.status(err.status || 500).json({
-        status: err.status || 500,
-        message: err.message || "Internal Server Error",
-        error: err.error || err.toString()
-      });
+        console.error(err.message);
+        logActivity("Error", err.message, "error", req.user ? req.user.id : null);
+        res.status(err.status || 500).json({
+            status: err.status || 500,
+            message: err.message || "Internal Server Error",
+            error: err.error || err.toString()
+        });
     }
-  });  
+});
   
 
 module.exports = router;
